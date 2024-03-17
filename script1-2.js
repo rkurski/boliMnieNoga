@@ -1768,14 +1768,17 @@ if (typeof GAME === 'undefined') { } else {
                     }
                 });
                 $('#klawiszb5').click(() => {
-                    var keyEvent = jQuery.Event('keydown');
-                    keyEvent.which = 66;  // Kod klawisza 'b' 
-                    $(document).trigger(keyEvent);
+                    this.pvpKill();
+                    // var keyEvent = jQuery.Event('keydown');
+                    // keyEvent.which = 66;  // Kod klawisza 'b' 
+                    // $(document).trigger(keyEvent);
                 });
                 $('#klawiszn').click(() => {
-                    var keyEvent = jQuery.Event('keydown');
-                    keyEvent.which = 78;  // Kod klawisza 'n'
-                    $(document).trigger(keyEvent);
+                    this.useCompressor();
+                    kom_clear();
+                    // var keyEvent = jQuery.Event('keydown');
+                    // keyEvent.which = 78;  // Kod klawisza 'n'
+                    // $(document).trigger(keyEvent);
                 });
             }
         }
