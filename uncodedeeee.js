@@ -1472,11 +1472,11 @@ if (typeof GAME === 'undefined') {} else {
             };
             GAME.parseListPlayer = function (entry, pvp_master) {
                 var res = '';
-                if (
-                    (GAME.char_data.reborn < 4 && entry.data.reborn < 4) ||
-                    (entry.data.reborn <= GAME.char_data.reborn) ||
-                    (!PVP.higherRebornAvoid)
-                ) {
+                if (entry.data) {
+                    var pd = entry.data;
+                    if (PVP.higherRebornAvoid) {
+                        if (pd.reborn > 3 && pd.reborn > GAME.char_data.reborn) { return res; }
+                    }
                     var pd = entry.data;
                     var qb = '';
                     var klan = '', erank = '';
