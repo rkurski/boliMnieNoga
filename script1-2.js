@@ -537,14 +537,43 @@ if (typeof GAME === 'undefined') { } else {
             }
             parseMapInfo(quests, where) {
                 let mapInfo = Object.values(quests).filter(this.filterQuests);
+                let questsCoords = this.findQuests(quests)
+                let skCoords = this.findSK(GAME.map_balls)
                 let mapSK = Object.keys(GAME.map_balls) ? Object.keys(GAME.map_balls).length : 0;
-                $(`#kws_locInfo .content`).html(`Zadania: ${mapInfo.length}<br>SK: ${mapSK}`);
+                $(`#kws_locInfo .content`).html(`Zadania: ${mapInfo.length} ${questsCoords}SK: ${mapSK} ${skCoords}`);
             }
             filterQuests(quest) {
                 let steps = quest.length;
                 if (steps > 0 && quest[steps - 1] && quest[steps - 1].end != 1) {
                     return quest;
                 }
+            }
+            findQuests(quests) {
+                if (!Object.values(quests).length) return  '</br>';
+
+                let list = "<br<ul style='padding-inline-start: 15px;'>";
+                for (let key in quests) {
+                    if (quests.hasOwnProperty(key)) {
+                        let quest = quests[key][0];
+                        let formattedKey = key.replace("_", " | ");
+                        list += "<li>" + formattedKey + ": " + quest.name + "</li>";
+                    }
+                }
+                list += "</ul>";
+                return list;
+            }
+            findSK(balls) {
+                if (!Object.values(balls).length) return "";
+
+                let list = "<br><ul style='padding-inline-start: 15px;'>";
+                for (let key in balls) {
+                    if (balls.hasOwnProperty(key)) {
+                        let formattedKey = key.replace("_", " | ");
+                        list += "<li>" + formattedKey + ": " + balls[key] + "</li>"; // Dodanie kulki do listy
+                    }
+                }
+                list += "</ul>";
+                return list;
             }
             setWebsiteBackground() {
                 if (localStorage.getItem('kws_wbg')) {
@@ -1282,7 +1311,8 @@ if (typeof GAME === 'undefined') { } else {
                     let value = parseInt($(el.target).val());
                     if (value == 1) {
                         $("#kws_locInfo").css({
-                            "display": "block"
+                            "display": "block",
+                            "background-size": "cover"
                         });
                     } else {
                         $("#kws_locInfo").css({
