@@ -551,7 +551,7 @@ if (typeof GAME === 'undefined') { } else {
             }
             parseMapInfo(quests, where) {
                 let mapInfo = Object.values(quests).filter(this.filterQuests);
-                let questsCoords = this.findQuests(quests)
+                let questsCoords = this.findQuests(mapInfo, quests)
                 let skCoords = this.findSK(GAME.map_balls)
                 let mapSK = Object.keys(GAME.map_balls) ? Object.keys(GAME.map_balls).length : 0;
                 $(`#kws_locInfo .content`).html(`Zadania: ${mapInfo.length} ${questsCoords}SK: ${mapSK} ${skCoords}`);
@@ -562,20 +562,33 @@ if (typeof GAME === 'undefined') { } else {
                     return quest;
                 }
             }
-            findQuests(quests) {
-                if (!Object.values(quests).length) return  '</br>';
-
-                let list = "<br<ul style='padding-inline-start: 15px;'>";
-                for (let key in quests) {
-                    if (quests.hasOwnProperty(key)) {
-                        let quest = quests[key][0];
-                        let formattedKey = key.replace("_", " | ");
-                        list += "<li>" + formattedKey + ": " + quest.name + "</li>";
+            findQuests(mapInfo, quests) {
+                let content = "<ul style='padding-inline-start: 15px;'>";
+            
+                mapInfo.forEach(infoArray => {
+                    if (infoArray[0] !== false) {
+                        let questData = infoArray[0];
+                        let qb_id = questData.qb_id.toString();
+                        let coord = '';
+            
+                        for (let key in quests) {
+                            if (quests[key][0] && quests[key][0].qb_id === parseInt(qb_id)) {
+                                coord = key;
+                                break;
+                            }
+                        }
+            
+                        if (coord) {
+                            let coordParts = coord.split('_').map(part => parseInt(part));
+                            let formattedKey = coordParts.join(' | ');
+                            content += `<li>${formattedKey}: ${questData.name}</li>`;
+                        }
                     }
-                }
-                list += "</ul>";
-                return list;
-            }
+                });
+            
+                content += "</ul>";
+                return content;
+            }            
             findSK(balls) {
                 if (!Object.values(balls).length) return "";
 
