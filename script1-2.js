@@ -551,7 +551,7 @@ if (typeof GAME === 'undefined') { } else {
             }
             parseMapInfo(quests, where) {
                 let mapInfo = Object.values(quests).filter(this.filterQuests);
-                let questsCoords = this.findQuests(mapInfo, quests)
+                let questsCoords = this.findQuests(mapInfo, GAME.map_quests)
                 let skCoords = this.findSK(GAME.map_balls)
                 let mapSK = Object.keys(GAME.map_balls) ? Object.keys(GAME.map_balls).length : 0;
                 $(`#kws_locInfo .content`).html(`Zadania: ${mapInfo.length} ${questsCoords}SK: ${mapSK} ${skCoords}`);

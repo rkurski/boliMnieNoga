@@ -1474,9 +1474,7 @@ if (typeof GAME === 'undefined') {} else {
                 var res = '';
                 if (entry.data) {
                     var pd = entry.data;
-                    if (PVP.higherRebornAvoid) {
-                        if (pd.reborn > 3 && pd.reborn > GAME.char_data.reborn) { return res; }
-                    }
+                    if (PVP.higherRebornAvoid && pd.reborn > GAME.char_data.reborn && pd.reborn > 3){return res;}
                     var pd = entry.data;
                     var qb = '';
                     var klan = '', erank = '';
@@ -1511,12 +1509,9 @@ if (typeof GAME === 'undefined') {} else {
             GAME.parsePlayerShadow = function (data, pvp_master) {
                 var entry = data.data;
                 var res = '';
-                if (
-                    (GAME.char_data.reborn < 4 && entry.data.reborn < 4) ||
-                    (entry.data.reborn <= GAME.char_data.reborn) ||
-                    (!PVP.higherRebornAvoid)
-                ) {
+                if (entry.data) {
                     var pd = entry.data;
+                    if ( PVP.higherRebornAvoid && pd.reborn > GAME.char_data.reborn && pd.reborn > 3){return res;}
                     pd.empire = entry.empire;
                     var qb = '';
                     var erank = '';
