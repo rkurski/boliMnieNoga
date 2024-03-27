@@ -47,7 +47,7 @@ class KwsCharactersManager {
 }
 
 function getCharacters() {
-    if (GAME == undefined) {
+    if (typeof GAME === 'undefined') {
         setTimeout(getCharacters, 200);
     } else {
         var allCharacters = [...$("li[data-option=select_char]")];
