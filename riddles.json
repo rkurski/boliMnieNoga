@@ -270,5 +270,25 @@
     {
         "id": 298,
         "answer": "Sasza"
-    }    
+    },
+    {
+        "id": 310,
+        "answer": "Przyszłość"
+    },
+    {
+        "id": 311,
+        "answer": "Czas"
+    },
+    {
+        "id": 312,
+        "answer": "Cień"
+    },
+    {
+        "id": 313,
+        "answer": "Orzechy"
+    },
+    {
+        "id": 314,
+        "answer": "Deszcz"
+    }
 ]
