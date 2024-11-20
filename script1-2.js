@@ -2311,18 +2311,44 @@ if (typeof GAME === 'undefined') { } else {
                 }
             } else this.endQuest(quest_move.qb_id);
         };
-        GAME.parseLocBons = function (loc_data) {
-            kws.parseMapInfo(GAME.map_quests, "GAME.parseLocBons");
+        GAME.parseLocBons = function(loc_data) {
             var bons = '';
-            if (loc_data.bonus_tren) bons += '<img src="/gfx/icons/loc_bon/tren.png" data-toggle="tooltip" data-original-title="<div class=tt><b>' + loc_data.bonus_tren + '</b>' + LNG.item_stat15 + '</div>" />';
-            if (loc_data.bonus_exp) bons += '<img src="/gfx/icons/loc_bon/exp.png" data-toggle="tooltip" data-original-title="<div class=tt><b>' + loc_data.bonus_exp + '</b>' + LNG.item_stat16 + '</div>" />';
-            if (loc_data.bonus_mocc) bons += '<img src="/gfx/icons/loc_bon/mc.png" data-toggle="tooltip" data-original-title="<div class=tt><b>' + loc_data.bonus_mocc + '</b>' + LNG.item_stat53 + '</div>" />';
-            if (loc_data.bonus_mocv) bons += '<img src="/gfx/icons/loc_bon/mv.png" data-toggle="tooltip" data-original-title="<div class=tt><b>' + loc_data.bonus_mocv + '</b>' + LNG.item_stat54 + '</div>" />';
-            if (loc_data.bonus_legend) bons += '<img src="/gfx/icons/loc_bon/l.png" data-toggle="tooltip" data-original-title="<div class=tt><b>' + loc_data.bonus_legend + '</b>' + LNG.item_stat74 + '</div>" />';
-            if (loc_data.bonus_psk) bons += '<img src="/gfx/icons/loc_bon/p.png" data-toggle="tooltip" data-original-title="<div class=tt><b>' + loc_data.bonus_psk + '</b>' + LNG.item_stat67 + '</div>" />';
-            if (loc_data.bonus_senzu) bons += '<img src="/gfx/icons/loc_bon/s.png" data-toggle="tooltip" data-original-title="<div class=tt><b>' + loc_data.bonus_senzu + '</b>' + LNG.item_stat78 + '</div>" />';
+            if (loc_data.locb) {
+                var len = loc_data.locb.length;
+                var rc = '';  // To handle disabled status for reborn check
+                var rd = '';  // To handle message for reborn condition
+                
+                // Check reborn condition: compare the location's reborn value with the user's reborn value
+                if (loc_data.reborn < this.char_data.reborn) {
+                    rc = 'disabled';  // If reborn condition is not met, add the disabled class
+                    rd = '<br /><spac class=red>' + LNG.lab463 + '</span>';  // Add warning message
+                }
+
+                // Loop through the 'locb' array to process each bonus
+                for (var i = 0; i < len; i++) {
+                    var icon = 'other';  // Default icon for unknown bonus type
+                    
+                    // Switch to set the correct icon based on the bonus ID
+                    switch (loc_data.locb[i].id) {
+                        case 15: icon = 'tren'; break;   // Icon for tren bonus
+                        case 16: icon = 'exp'; break;    // Icon for exp bonus
+                        case 53: icon = 'mc'; break;     // Icon for mocc bonus
+                        case 54: icon = 'mv'; break;     // Icon for mocv bonus
+                        case 74: icon = 'l'; break;      // Icon for legend bonus
+                        case 67: icon = 'p'; break;      // Icon for psk bonus
+                        case 78: icon = 's'; break;      // Icon for senzu bonus
+                        default: icon = 'other';         // Fallback icon for unknown types
+                    }
+                    
+                    // Append the bonus image and tooltip HTML to the 'bons' string
+                    bons += '<img src="/gfx/icons/loc_bon/' + icon + '.png" class="' + rc + '" ' + 
+                            'data-toggle="tooltip" ' + 
+                            'data-original-title="<div class=tt><b>' + loc_data.locb[i].val + '</b>' + 
+                            LNG['item_stat' + loc_data.locb[i].id] + rd + '</div>" />';
+                }
+            }
             return bons;
-        };
+        };        
         GAME.emit = function (order, data, force) {
             if (!this.is_loading || force) {
                 this.load_start();
