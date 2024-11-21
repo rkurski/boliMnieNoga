@@ -124,6 +124,9 @@ if (typeof GAME === 'undefined') { } else {
                 if (riddle) {
                     $("input[id=quest_riddle]").val(riddle.answer);
                 }
+                else {
+                    console.log('riddle id: ', r_id)
+                }
             }
             getSettings() {
                 let settings = JSON.parse(localStorage.getItem("kws_settings"));
@@ -2311,44 +2314,11 @@ if (typeof GAME === 'undefined') { } else {
                 }
             } else this.endQuest(quest_move.qb_id);
         };
-        GAME.parseLocBons = function(loc_data) {
-            var bons = '';
-            if (loc_data.locb) {
-                var len = loc_data.locb.length;
-                var rc = '';  // To handle disabled status for reborn check
-                var rd = '';  // To handle message for reborn condition
-                
-                // Check reborn condition: compare the location's reborn value with the user's reborn value
-                if (loc_data.reborn < this.char_data.reborn) {
-                    rc = 'disabled';  // If reborn condition is not met, add the disabled class
-                    rd = '<br /><spac class=red>' + LNG.lab463 + '</span>';  // Add warning message
-                }
-
-                // Loop through the 'locb' array to process each bonus
-                for (var i = 0; i < len; i++) {
-                    var icon = 'other';  // Default icon for unknown bonus type
-                    
-                    // Switch to set the correct icon based on the bonus ID
-                    switch (loc_data.locb[i].id) {
-                        case 15: icon = 'tren'; break;   // Icon for tren bonus
-                        case 16: icon = 'exp'; break;    // Icon for exp bonus
-                        case 53: icon = 'mc'; break;     // Icon for mocc bonus
-                        case 54: icon = 'mv'; break;     // Icon for mocv bonus
-                        case 74: icon = 'l'; break;      // Icon for legend bonus
-                        case 67: icon = 'p'; break;      // Icon for psk bonus
-                        case 78: icon = 's'; break;      // Icon for senzu bonus
-                        default: icon = 'other';         // Fallback icon for unknown types
-                    }
-                    
-                    // Append the bonus image and tooltip HTML to the 'bons' string
-                    bons += '<img src="/gfx/icons/loc_bon/' + icon + '.png" class="' + rc + '" ' + 
-                            'data-toggle="tooltip" ' + 
-                            'data-original-title="<div class=tt><b>' + loc_data.locb[i].val + '</b>' + 
-                            LNG['item_stat' + loc_data.locb[i].id] + rd + '</div>" />';
-                }
-            }
-            return bons;
-        };        
+        GAME.parseLocBons_o = GAME.parseLocBons;
+        GAME.parseLocBons = function (loc_data) {
+            kws.parseMapInfo(GAME.map_quests, "GAME.parseLocBons");
+            return GAME.parseLocBons_o(loc_data);
+        };
         GAME.emit = function (order, data, force) {
             if (!this.is_loading || force) {
                 this.load_start();
