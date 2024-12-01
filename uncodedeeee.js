@@ -179,12 +179,10 @@ if (typeof GAME === 'undefined') {} else {
                         $(".pvpCODE_konto .pvp_status").removeClass("green").addClass("red").html("Off");
                         PVP.kontoTP = false;
                         PVP.codeTP = false;
-                        console.log("off")
                     } else {
                         $(".pvpCODE_konto .pvp_status").removeClass("red").addClass("green").html("On");
                         PVP.kontoTP = true;
                         PVP.codeTP = true;
-                        console.log("on")
                     }
                 });
                 $('#pvp_Panel .pvp_WI').click(() => {
@@ -315,7 +313,6 @@ if (typeof GAME === 'undefined') {} else {
                         $(".resp_konto .resp_status").removeClass("green").addClass("red").html("Off");
                         RESP.kontoTP = false;
                         RESP.codeTP = false;
-                        console.log("off")
                     } else {
                         $(".resp_konto .resp_status").removeClass("red").addClass("green").html("On");
                         RESP.kontoTP = true;
@@ -1017,7 +1014,7 @@ if (typeof GAME === 'undefined') {} else {
                 war: false,
                 buff_imp: false,
                 buff_clan: false,
-                kontoTP: true,
+                kontoTP: false,
                 codeTP: true
             };
             PVP.checkkkk = () => {

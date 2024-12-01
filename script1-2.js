@@ -18,6 +18,7 @@ if (typeof GAME === 'undefined') { } else {
         }
         class kwsv3 {
             constructor(charactersManager) {
+                this.reported = false;
                 this.charactersManager = charactersManager;
                 this.isLogged((data) => {
                     Object.defineProperty(GAME, 'pid', {
@@ -40,7 +41,7 @@ if (typeof GAME === 'undefined') { } else {
                 this.loadRiddles((data) => {
                     this.riddles = data;
                 });
-                this.addToCSS(`.kom {background: url(/gfx/layout/tloPilot.png); background-size: cover; border-image: url(/gfx/layout/mapborder.png) 7 8 7 7 fill; border-style: solid; border-width: 7px 8px 7px 7px; box-shadow: none;}.kom .close_kom b {background: url(/gfx/layout/tloPilot.png);}.exchange_win {overflow-y: auto;overflow-x: hidden;padding-right: 10px;box-sizing: border-box;}.exchange_win::-webkit-scrollbar {width: 13px;}.exchange_win::-webkit-scrollbar-track {background: #f0f0f0;border-radius: 10px;}.exchange_win::-webkit-scrollbar-thumb {background: #c0c0c0;border-radius: 10px;border: 2px solid transparent;background-clip: content-box;}.exchange_win {scrollbar-width: thin;scrollbar-color: #c0c0c0 #f0f0f0;}`);
+                this.addToCSS(`.kom{background:url(/gfx/layout/tloPilot.png); background-size:cover; border-image:url(/gfx/layout/mapborder.png) 7 8 7 7 fill; border-style:solid; border-width:7px 8px 7px 7px; box-shadow:none;} .kom .close_kom b{background:url(/gfx/layout/tloPilot.png);} .exchange_win{max-height:500; height:auto;}`);
                 this.addToCSS(`#emp_list .petopt_btns .newBtn{margin:0px 3px 3px 0px;} .newBtn.do_all_instances{color:#e5d029;}`);
                 this.addToCSS(`#quick_bar{z-index:4;} .qlink.kws_active_icon{animation-name:kws_active_icon;animation-duration:1s;animation-iteration-count:infinite;}@keyframes kws_active_icon { 0% { filter: hue-rotate(168deg); } 50% { filter:hue-rotate(40deg); } 100% { filter: hue-rotate(168deg); } } .sideIcons{ width:29px; height:29px; left:-37px; background-size:contain; } .autoExpeCodes{background:#12121294; border:1px solid rgb(87, 87, 114); border-radius:5px 0px 0px 5px; position:absolute; top:-100px; left:-97px; padding:5px; display:none; color:#ffe500c7; user-select:none;} .manage_autoExpeditions:hover + .autoExpeCodes, .autoExpeCodes:hover{ display:flex; } .autoExpeCodes .newCheckbox{margin: 0 auto; display: block;} `);
                 this.addToCSS(`#secondary_char_stats .instance{margin-top:10px; cursor:pointer; width:100px;} #secondary_char_stats .activities{margin-top:-5px; cursor:pointer; width:100px;} #secondary_char_stats ul {margin-top:-18px; margin-left:-18px;} .ico.a11{background:url("https://raw.githubusercontent.com/rkurski/boliMnieNoga/main-3.5/instances.png"); background-repeat: no-repeat; background-size: inherit; background-position: center;} .ico.a12{background-image: url(https://raw.githubusercontent.com/rkurski/boliMnieNoga/main-3.5/activity.png); background-repeat: no-repeat; background-size: inherit; background-position: center;}`);
@@ -1755,7 +1756,7 @@ if (typeof GAME === 'undefined') { } else {
                 }
             }
             checkTournamentsSigning() {
-                if (this.isCheckingTournaments) { /*console.log("KWA_TOURNAMENTS: currently handling tournaments sign");*/ return; }
+                if(this.isCheckingTournaments) { return; }
                 this.isCheckingTournaments = true;
                 var currentServerTime = new Date(GAME.getTime() * 1000);
                 var currentServerHour = currentServerTime.getHours();
@@ -2159,6 +2160,10 @@ if (typeof GAME === 'undefined') { } else {
             }
             adjustCurrentCharacterId() {
                 var thisCharId = GAME.char_id;
+                if (this.charactersManager.currentCharacterId === undefined) {
+                    this.charactersManager.setCurrentCharacterId(thisCharId);
+                    return;
+                }
                 if (thisCharId != this.charactersManager.currentCharacterId) {
                     this.charactersManager.setCurrentCharacterId(thisCharId);
                 }
@@ -2185,7 +2190,7 @@ if (typeof GAME === 'undefined') { } else {
                     this.tourSigned = false;
                     this.tournamentCategory = undefined;
                     this.newTournamentID = undefined;
-                    this.isCheckingTournaments = false;
+                    // this.isCheckingTournaments = false;
                 }, 1000);
             }
         }
