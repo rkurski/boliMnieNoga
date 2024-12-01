@@ -281,7 +281,7 @@ $('#startButton').click(() => {
         const petId = $('#petIdSelect').val();
         const button = document.querySelector(`#pet_list > div:nth-child(${petId}) > div.rightSide > div > button:nth-child(2)`);
         const petId2 = button.getAttribute("data-pet");
-        console.log(petId2);
+        // console.log(petId2);
         GAME.socket.emit('ga', { a: 43, type: 7, pet: petId2 });
         kom_clear();
       }
@@ -457,7 +457,7 @@ let intervalId2; // Zmienna dla ID interwału
         .filter(value => value !== ""); // Pomiń puste pola
 
       var combinedValues = statValValues.map((val, index) => `${val}${statBonValues[index]}`);
-      console.log(combinedValues);
+      // console.log(combinedValues);
       const toCheck = selectedOptions2.filter(options => {
         var contain = false
         for (const option of options) {
@@ -478,7 +478,7 @@ let intervalId2; // Zmienna dla ID interwału
           clearInterval(intervalId2);
         }
       } else {
-        console.log("Brak pełnego dopasowania, ponawiam próbę...");
+        // console.log("Brak pełnego dopasowania, ponawiam próbę...");
         GAME.socket.emit('ga', { a:45,type:1,bid:GAME.ball_id });
       }
 

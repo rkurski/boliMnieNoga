@@ -124,7 +124,7 @@ class calculatePA {
                 }
             });
         }
-        console.log(stacks);
+        // console.log(stacks);
         return stacks;
     }
 
@@ -202,7 +202,7 @@ class locationWrapper {
                                     dataLocArray.push(dataLocValue);
                                 }
                             });
-                            console.log("Zebrane lokalizacje:", dataLocArray);
+                            // console.log("Zebrane lokalizacje:", dataLocArray);
                         } else {
                             console.error("Element o ID #tp_list nie został znaleziony.");
                         }

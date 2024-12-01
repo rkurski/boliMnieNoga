@@ -1,7 +1,7 @@
 class KwsConnectionManager {
     constructor() {
         this.isRunning = false;
-        console.log("KWS: new connection monitor created");
+        // console.log("KWS: new connection monitor created");
         this.handleLoginProcess();
     }
     setReconnectionCookie(reset = false) {
@@ -9,7 +9,7 @@ class KwsConnectionManager {
         d.setTime(d.getTime() + (1 * 24 * 60 * 60 * 1000));
         let expires = "expires=" + d.toUTCString();
         var cookieValue = reset ? '' : GAME.char_id;
-        console.log("KWS: setting reconnection cookie = %s", cookieValue);
+        // console.log("KWS: setting reconnection cookie = %s", cookieValue);
         document.cookie = "kwsreccharid" + "=" + cookieValue + ";" + expires + ";path=/" + ";domain=kosmiczni.pl";
         document.cookie = "kwsreccharid" + "=" + cookieValue + ";" + expires + ";path=/";
     }
@@ -30,32 +30,32 @@ class KwsConnectionManager {
     }
 
     redirectToMain() {
-        console.log("KWS: redirect to main page after disconnect");
+        // console.log("KWS: redirect to main page after disconnect");
         this.isRunning = false;
         GAME.redirect(locals.main_url, 0);
     }
 
     logout() {
-        console.log("KWS: logout after disconnect");
+        // console.log("KWS: logout after disconnect");
         setTimeout(GAME.emitOrder({ a: 1 }), 1000);
         setTimeout(this.redirectToMain, 2000);
     }
 
     login(disconnectedCharacterId) {
-        console.log("KWS: reconnecting to disconnected charID = %s", disconnectedCharacterId);
+        // console.log("KWS: reconnecting to disconnected charID = %s", disconnectedCharacterId);
         GAME.emitOrder({ a: 2, char_id: disconnectedCharacterId });
         this.setReconnectionCookie(true);
         this.isRunning = false;
     }
 
     clickFirstLogin() {
-        console.log("KWS: attempt to login first step...");
+        // console.log("KWS: attempt to login first step...");
         $("#cg_login_button1").eq(0).click();
         setTimeout(this.clickSecondLogin, 15000);
     }
 
     clickSecondLogin() {
-        console.log("KWS: attempt to login second step...");
+        // console.log("KWS: attempt to login second step...");
         $("#cg_login_button2").eq(0).click();
         this.isRunning = false;
     }
@@ -68,10 +68,10 @@ class KwsConnectionManager {
 
     handleLoginProcess() {
         this.isRunning = true;
-        console.log("KWS: connection monitor check...");
+        // console.log("KWS: connection monitor check...");
         var disconnectedCharacterId = this.getReconnectionCookie();
         if (disconnectedCharacterId != '') {
-            console.log("KWS: attempt to login...");
+            // console.log("KWS: attempt to login...");
             var allCharacters = [...$("li[data-option=select_char]")];
             if (allCharacters.length != 0) {
                 this.login(disconnectedCharacterId);
@@ -83,7 +83,7 @@ class KwsConnectionManager {
                 //this.clickFirstLogin();
             }
         } else {
-            console.log("KWS: no login needed...");
+            // console.log("KWS: no login needed...");
             this.isRunning = false;
         }
     }
@@ -104,20 +104,20 @@ if (kwsConnectionMonitorVerifier) {
 
 function verifyConnectionManager() {
     if (typeof kwsConnectionMonitor === 'undefined') {
-        console.log("KWS: no connection monitor - create new");
+        // console.log("KWS: no connection monitor - create new");
         kwsConnectionMonitor = new KwsConnectionManager();
     } else {
-        console.log("KWS: connection monitor detected");
+        // console.log("KWS: connection monitor detected");
         var disconnectedCharacterId = kwsConnectionMonitor.getReconnectionCookie();
         if (disconnectedCharacterId != '') {
             if (kwsConnectionMonitor.isRunning) {
-                console.log("KWS: connection monitor is running something, please wait!");
+                // console.log("KWS: connection monitor is running something, please wait!");
             } else {
-                console.log("KWS: connection monitor not running, trying to manually run it");
+                // console.log("KWS: connection monitor not running, trying to manually run it");
                 kwsConnectionMonitor.handleLoginProcess();
             }
         } else {
-            console.log("KWS: no need for connection manager, all good!");
+            // console.log("KWS: no need for connection manager, all good!");
         }
     }
 }
@@ -127,7 +127,7 @@ var kwsConnectionMonitorVerifier = setInterval(verifyConnectionManager, 5000);
 if (typeof GAME != 'undefined') {
     GAME.dcHandler = function () {
         if (GAME.is_disconnected > 0) {
-            console.log("dcHandler", GAME.is_disconnected);
+            // console.log("dcHandler", GAME.is_disconnected);
             GAME.is_disconnected--;
             if (GAME.is_disconnected <= 0) {
                 GAME.load_stop();

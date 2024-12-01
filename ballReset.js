@@ -419,7 +419,7 @@ class pet_bonch {
                         clearInterval(this.petInterval);
                         this.isPetBonchActive = false;
                     } else {
-                        console.log("Brak pełnego dopasowania, ponawiam próbę...");
+                        // console.log("Brak pełnego dopasowania, ponawiam próbę...");
                         const petId = $('#petIdSelect').val();
                         const button = document.querySelector(`#pet_list > div:nth-child(${petId}) > div.rightSide > div > button:nth-child(2)`);
                         const petId2 = button.getAttribute("data-pet");
@@ -593,8 +593,8 @@ class anielskaReset {
                     .filter(value => value !== "");
 
                 const combinedValues = statValValues.map((val, index) => `${val}${statBonValues[index]}`);
-                console.log(combinedValues);
-                console.log(selectedOptions2);
+                // console.log(combinedValues);
+                // console.log(selectedOptions2);
 
                 const toCheck = selectedOptions2.filter(options => {
                     return !options.some(option => combinedValues.includes(option));
@@ -608,7 +608,7 @@ class anielskaReset {
                         clearInterval(this.anielskaInterval);
                     }
                 } else {
-                    console.log("Brak pełnego dopasowania, ponawiam próbę...");
+                    // console.log("Brak pełnego dopasowania, ponawiam próbę...");
                     GAME.socket.emit('ga', { a: 45, type: 1, bid: GAME.ball_id });
                 }
             };
