@@ -2,7 +2,10 @@ class ekwipunekMenager {
     constructor() {
         const otwieranieKart = new cardOpen();
         const mapWrapper = new locationWrapper();
+        const questFilter = new filterQuest();
         this.setupCalculatePA();
+        const lvl12all = new lv12all();
+        lvl12all.initialize();
     }
 
     setupCalculatePA() {
@@ -10,7 +13,6 @@ class ekwipunekMenager {
 
         if (ekwipunekButton) {
             ekwipunekButton.addEventListener('click', () => {
-                console.log("Przycisk Ekwipunek kliknięty.");
                 this.createOrUpdatePADisplay();
             });
         } else {
@@ -37,9 +39,142 @@ class ekwipunekMenager {
             paDiv.style.left = "40%";
             titleDiv.appendChild(paDiv);
             paDiv.addEventListener("click", () => {
-                console.log("Obliczanie PA rozpoczęte...");
                 new calculatePA();
             });
+        }
+    }
+}
+
+class lv12all {
+    constructor() {
+        this.stopUpgrading = false; // Global variable to control the loop
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    getAllCardsByType(cardType) {
+        const sc_upgrades = document.getElementById("sc_upgrades");
+        const cardsSameType = Array.from(sc_upgrades.querySelectorAll('div')).filter(function(div) {
+            const img = div.querySelector('img');
+            return img && img.src.includes(cardType);
+        });
+
+        return cardsSameType.map(function(div) {
+            const level = div.querySelector('span') ? div.querySelector('span').textContent : null;
+            const stack = div.querySelector('i') ? div.querySelector('i').textContent : null;
+            const cardId = div.getAttribute('data-card_id');
+
+            return {
+                level: parseInt(level),
+                stack: parseInt(stack),
+                cardId: cardId
+            };
+        });
+    }
+
+    upgradeCard(cardId) {
+        GAME.socket.emit('ga', {a: 58, type: 3, card: cardId});
+        kom_clear();
+        GAME.komunikat2(`Upgrading card...`);
+        let komunikatElement = document.querySelector('#kom_con .kom');
+            if (komunikatElement) {
+                if (!komunikatElement.querySelector('.stop')) {
+                    komunikatElement.innerHTML += `
+                    <button class="newBtn stop">STOP ULEPSZANIA</button>`;
+                }
+            }
+            $("body").on("click", '.stop', () => {
+                this.stopUpgrading = false;
+                kom_clear();
+            });
+    }
+
+    /**
+     * Upgrade card to max level
+     * @param {string} cardType - card type to upgrade
+     * @param {number} maxLevel - max level to upgrade
+     * @param {boolean} useExistingWeakerCard - if true, upgrade weaker card first, closest to max level
+     * @param {number} forceUpgradeCardLevel - if provided, upgrade card with this level
+     * @returns {boolean} - true if card was upgraded, false otherwise
+     */
+    upgrader(cardType, maxLevel, useExistingWeakerCard = false, forceUpgradeCardLevel = undefined) {
+        const cards = this.getAllCardsByType(cardType);
+
+        // no cards to upgrade
+        if (cards.length === 0) {
+            return false;
+        }
+
+        // return false if there is no level 1
+        if (cards.filter(card => card.level === 1).length === 0) {
+            return false;
+        }
+
+        let cardToUpgrade;
+
+        // upgrade card with provided level
+        if (forceUpgradeCardLevel) {
+            cardToUpgrade = cards
+                .filter(card => card.level === forceUpgradeCardLevel)
+                .sort((a, b) => a.stack - b.stack)
+                .shift();
+        }
+        else if (useExistingWeakerCard) {
+            cardToUpgrade = cards
+                .filter(card => card.level < maxLevel)
+                .sort((a, b) => b.level - a.level)
+                .shift();
+        }
+
+        if (cardToUpgrade) {
+            if (cardToUpgrade.level === 1 && cardToUpgrade.stack === 1) {
+                GAME.komunikat2('Card level is 1 and stack is 1. Stopping upgrade process.');
+                this.stopUpgrading = false;
+                setTimeout(() => { kom_clear(); }, 2000);
+                return false;
+            }
+            this.upgradeCard(cardToUpgrade.cardId);
+            return true;
+        }
+
+        return false;
+    }
+
+    async startStopButton() {
+        const button = document.createElement('button');
+        button.className = 'option btn_small_gold';
+        button.setAttribute('data-option', 'map_cards');
+        button.textContent = 'lv12ALL';
+        button.addEventListener("click", async () => {
+            this.stopUpgrading = !this.stopUpgrading; // Toggle the state
+            if (!this.stopUpgrading) {
+                GAME.komunikat2('Card upgrading stopped.');
+                return;
+            }
+            const selected_card = $(`div[data-card_id="${GAME.selected_card}"]`);
+            const cardType = selected_card.find('img').attr('src');
+            let continueUpgrading = true;
+            do {
+                // Upgrade cards to level 12 until there are no more cards to upgrade or the process is stopped
+                continueUpgrading = this.upgrader(cardType, 12, true);
+                await this.delay(1000);
+            } while (continueUpgrading && this.stopUpgrading);
+
+            if (this.stopUpgrading) {
+                GAME.komunikat2('All cards used');
+                this.stopUpgrading = false;
+                setTimeout(() => {kom_clear();}, 2000);
+            }
+        });
+
+        document.getElementById("soulcard_menu").appendChild(button);
+    }
+
+    initialize() {
+        if (!document.getElementById("soulcard_menu").querySelector('button[data-option="map_cards"]')) {
+            this.startStopButton();
         }
     }
 }
@@ -53,13 +188,28 @@ class cardOpen {
                 }, 500);
             });
         });
+
         $("body").on("click", '.otwieranie_kart', () => {
             let upperLimit = parseInt(document.querySelector("#item_am").value, 10);
             if (!isNaN(upperLimit) && upperLimit > 0) {
+                let stopOpening = false;
                 for (let i = 0; i < upperLimit; i++) {
                     setTimeout(() => {
+                        if (stopOpening) return;
                         let cards = $(`#ekw_page_items div[data-base_item_id="1784"]`);
+                        if (cards.length === 0) {
+                            setTimeout(() => { GAME.komunikat("Karty się skończyły.");}, 1000);
+                            stopOpening = true;
+                            return;
+                        }
                         let cards_id = parseInt(cards.attr("data-item_id"));
+                        let stack = parseInt(cards.attr('data-stack'), 10);
+                        if (stack < 100) {
+                            GAME.socket.emit('ga', { a: 12, type: 14, iid: cards_id, page: GAME.ekw_page, page2: GAME.ekw_page2, am: stack });
+                            setTimeout(() => { GAME.komunikat("Karty się skończyły.");}, 1000);
+                            stopOpening = true;
+                            return;
+                        }
                         GAME.socket.emit('ga', { a: 12, type: 14, iid: cards_id, page: GAME.ekw_page, page2: GAME.ekw_page2, am: '100' });
                     }, i * 2000);
                 }
@@ -102,7 +252,7 @@ class calculatePA {
         finalNumber += (itemStacks[1484] * initialPA) * 4;
 
         this.updatePA(GAME.dots(finalNumber));
-        console.log("MAX PA:" + initialPA + " Łączna ilość:" + finalNumber);
+        //console.log("MAX PA:" + initialPA + " Łączna ilość:" + finalNumber);
     }
 
     async getItemStacks(itemIds) {
@@ -189,8 +339,8 @@ class locationWrapper {
             if (!this.locationsGathered) {
                 this.locationsGathered = true;
                 setTimeout(() => {
-                    GAME.emitOrder({ a: 19, type: 1 });
-                    setTimeout(() => { document.querySelector("#map_link_btn").click(); }, 1000);
+                    GAME.emitOrder({a: 19, type: 1});
+                    setTimeout(() => {document.querySelector("#map_link_btn").click();}, 1000);
                     setTimeout(() => {
                         const dataLocArray = [];
                         const list = document.querySelector('#tp_list');
@@ -213,7 +363,7 @@ class locationWrapper {
                                 console.error("BRAK");
                             } else if (currentIndex > 0) {
                                 const previousLoc = dataLocArray[currentIndex - 1];
-                                GAME.emitOrder({ a: 12, type: 18, loc: previousLoc });
+                                GAME.emitOrder({a: 12, type: 18, loc: previousLoc});
                             }
                         });
                         $('#leftArrow').on('click', function () {
@@ -223,7 +373,7 @@ class locationWrapper {
                                 console.error("BRAK");
                             } else if (currentIndex < dataLocArray.length - 1) {
                                 const nextLoc = dataLocArray[currentIndex + 1];
-                                GAME.emitOrder({ a: 12, type: 18, loc: nextLoc });
+                                GAME.emitOrder({a: 12, type: 18, loc: nextLoc});
                             }
                         });
                     }, 1000);
@@ -233,5 +383,47 @@ class locationWrapper {
     }
 }
 
-
-
+class filterQuest {
+    constructor() {
+        $("body").on("click", '#map_link_btn', () => {
+            if ($("#quest-filter-input").length === 0) {
+                let questFilterHTML = `<input type="text" id="quest-filter-input" placeholder="Wpisz coś..." autocomplete="off"/>`;
+                let questFilterCSS = { 
+                    position: 'absolute', 
+                    top: '45px', 
+                    right: '120px', 
+                    backgroundSize: '100% 100%', 
+                    border: '1px solid rgb(42 173 173 / 44%)', 
+                    color: 'white',
+                    width: '200px',
+                    height: '30px',
+                    background: 'rgb(249 249 249 / 10%)',
+                    textAlign: 'center',
+                    lineHeight: '40px',
+                    textTransform: 'uppercase',
+                };
+                $('#rightArrow').after(questFilterHTML);
+                $("#quest-filter-input").css(questFilterCSS);
+                $("#quest-filter-input").on("input", this.filterQuests);
+            }
+            this.filterQuests();
+        });
+        const questContainer = document.querySelector('#drag_con');
+        const observer = new MutationObserver(this.filterQuests.bind(this));
+        observer.observe(questContainer, { childList: true, subtree: true });
+    }
+    filterQuests() {
+        const inputField = $("#quest-filter-input")[0]; 
+        const searchText = inputField.value.toLowerCase();
+        const questContainer = document.querySelector('#drag_con');
+        const quests = questContainer.querySelectorAll('.qtrack');
+        quests.forEach(quest => {
+            const questText = quest.textContent.toLowerCase(); 
+            if (questText.includes(searchText)) {
+                quest.style.display = '';
+            } else {
+                quest.style.display = 'none';
+            }
+        });
+    }
+}
