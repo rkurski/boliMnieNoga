@@ -10,12 +10,14 @@ if (typeof GAME === 'undefined') { } else {
 
     let Pgg = setInterval(() => {
         clearInterval(Pgg);
-        for (var i in GAME) {
-            if (i.indexOf("socxxx") === 0 && i.lastIndexOf("ket") + 3 === i.length) {
-                GAME.socket = GAME[i];
-                break;
+        Array.from(document.getElementsByTagName('script')).forEach(script => {
+            const scriptContent = script.innerHTML;
+            const regex = /const\s+([a-zA-Z0-9_]+)\s*=\s*(io\([^\)]+\));/g;
+            let match;
+            while ((match = regex.exec(scriptContent)) !== null) {
+                if (eval(match[1])['io']) {GAME.socket = eval(match[1]); return;}
             }
-        }
+        });
         class kwsv3 {
             constructor(charactersManager) {
                 this.reported = false;
