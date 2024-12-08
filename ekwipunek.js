@@ -159,7 +159,7 @@ class lv12all {
             do {
                 // Upgrade cards to level 12 until there are no more cards to upgrade or the process is stopped
                 continueUpgrading = this.upgrader(cardType, 12, true);
-                await this.delay(1000);
+                await this.delay(700);
             } while (continueUpgrading && this.stopUpgrading);
 
             if (this.stopUpgrading) {

@@ -613,7 +613,7 @@ class anielskaReset {
                 }
             };
 
-            this.anielskaInterval = setInterval(checkAndSendData2, 1500);
+            this.anielskaInterval = setInterval(checkAndSendData2, 700);
         });
     }
 
