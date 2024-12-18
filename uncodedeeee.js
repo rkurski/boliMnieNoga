@@ -14,10 +14,10 @@ if (typeof GAME === 'undefined') {} else {
                     GAME.emitOrder({a:40,klan_id:klan_id});
                 break;
                 case 'pvp_attack':
-                    GAME.emitOrder({a:24,char_id:th.data('char_id'),quick:th.data('quick')});
+                    GAME.emitOrder({a:window.a24value,char_id:th.data('char_id'),quick:th.data('quick')});
                 break;
                 case 'gpvp_attack':
-                    GAME.emitOrder({a:24,type:1,char_id:th.data('char_id'),quick:th.data('quick')});
+                    GAME.emitOrder({a:window.a24value,type:1,char_id:th.data('char_id'),quick:th.data('quick')});
                 break;
                 case 'load_more_players':
                     GAME.emitOrder({a:3,type:1,start:th.data('start_from'),vo:GAME.map_options.vo});
@@ -1240,7 +1240,7 @@ if (typeof GAME === 'undefined') {} else {
                 } else if (PVP.licznik < $("#player_list_con .player").length) {
                     if ($("#player_list_con .player").eq(PVP.licznik).find("[data-quick=1]").attr("data-option").includes("gxxx")) {
                         GAME.socket.emit('ga', {
-                            a: 24,
+                            a: window.a24value,
                             type: 1,
                             char_id: $("#player_list_con .player").eq(PVP.licznik).find("[data-quick=1]").attr("data-char_id"),
                             quick: 1
@@ -1249,7 +1249,7 @@ if (typeof GAME === 'undefined') {} else {
                         window.setTimeout(PVP.kill_players, PVP.czekajpvp / PVP.WSPP());
                     } else {
                         GAME.socket.emit('ga', {
-                            a: 24,
+                            a: window.a24value,
                             char_id: $("#player_list_con .player").eq(PVP.licznik).find("[data-quick=1]").attr("data-char_id"),
                             quick: 1
                         });
@@ -1272,7 +1272,7 @@ if (typeof GAME === 'undefined') {} else {
                         window.setTimeout(PVP.kill_players1, 50);
                     } else if (bbb.length > 0) {
                         GAME.socket.emit('ga', {
-                            a: 24,
+                            a: window.a24value,
                             type: 1,
                             char_id: bbbb,
                             quick: 1

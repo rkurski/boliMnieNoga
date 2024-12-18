@@ -18,6 +18,16 @@ if (typeof GAME === 'undefined') { } else {
                 if (eval(match[1])['io']) {GAME.socket = eval(match[1]); return;}
             }
         });
+
+        window.a24value = null;
+        Array.from(document.getElementsByTagName('script')).forEach(script => {
+                const scriptContent = script.innerHTML;
+                const regex = /a:\s*'([a-zA-Z0-9]+)'/g;
+                let match;
+                while ((match = regex.exec(scriptContent)) !== null) {
+                    window.a24value = match[1];
+                }
+        });
         class kwsv3 {
             constructor(charactersManager) {
                 this.reported = false;
