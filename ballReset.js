@@ -431,7 +431,7 @@ class pet_bonch {
                 }
             };
 
-            this.petInterval = setInterval(checkAndSendData, 2000);
+            this.petInterval = setInterval(checkAndSendData, 700);
         });
     }
 

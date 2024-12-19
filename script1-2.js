@@ -1039,7 +1039,7 @@ if (typeof GAME === 'undefined') { } else {
                             button: 2,
                             id: qb_id
                         });
-                    } else if ($(".quest_win .sekcja").text().toLowerCase() === "zadanie substancji" && $("button[data-option=finish_quest]").length === 3) {
+                    } else if ($(".quest_win .sekcja").text().toLowerCase().startsWith("zadanie substancji") && $("button[data-option=finish_quest]").length === 3) {
                         let qb_id = $("button[data-option=finish_quest]").attr("data-qb_id");
                         GAME.socket.emit('ga', {
                             a: 22,
