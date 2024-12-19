@@ -1014,7 +1014,7 @@ if (typeof GAME === 'undefined') {} else {
                 buff_imp: false,
                 buff_clan: false,
                 kontoTP: false,
-                codeTP: true
+                codeTP: false
             };
             PVP.checkkkk = () => {
                 let imp = $("#leader_player").find("[data-option=show_player]").attr("data-char_id");
@@ -1624,8 +1624,8 @@ if (typeof GAME === 'undefined') {} else {
                 checkSSJ: true,
                 jaka: 0,
                 zmiana: false,
-                kontoTP: true,
-                codeTP: true,
+                kontoTP: false,
+                codeTP: false,
                 multifight: true,
                 reload: false,
                 SENZU_BLUE: 'SENZU_BLUE',
