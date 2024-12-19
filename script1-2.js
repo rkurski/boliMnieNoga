@@ -19,18 +19,18 @@ if (typeof GAME === 'undefined') { } else {
             }
         });
 
-        window.a24value = null;
-        Array.from(document.getElementsByTagName('script')).forEach(script => {
-                const scriptContent = script.innerHTML;
-                const regex = /a:\s*'([a-zA-Z0-9]+)'/g;
-                let match;
-                while ((match = regex.exec(scriptContent)) !== null) {
-                    window.a24value = match[1];
-                }
-        });
+	window.a24value = null;
+	Array.from(document.getElementsByTagName('script')).forEach(script => {
+    	    const scriptContent = script.innerHTML;
+    	    const regex = /a:\s*'([a-zA-Z0-9]+)'/g;
+    	    let match;
+    	    while ((match = regex.exec(scriptContent)) !== null) {
+                window.a24value = match[1];
+    	    }
+	});
+
         class kwsv3 {
             constructor(charactersManager) {
-                this.reported = false;
                 this.charactersManager = charactersManager;
                 this.isLogged((data) => {
                     Object.defineProperty(GAME, 'pid', {
@@ -53,11 +53,11 @@ if (typeof GAME === 'undefined') { } else {
                 this.loadRiddles((data) => {
                     this.riddles = data;
                 });
-                this.addToCSS(`.kom{background:url(/gfx/layout/tloPilot.png); background-size:cover; border-image:url(/gfx/layout/mapborder.png) 7 8 7 7 fill; border-style:solid; border-width:7px 8px 7px 7px; box-shadow:none;} .kom .close_kom b{background:url(/gfx/layout/tloPilot.png);} .exchange_win{max-height:500; height:auto;}`);
+                this.addToCSS(`.kom {background: url(/gfx/layout/tloPilot.png); background-size: cover; border-image: url(/gfx/layout/mapborder.png) 7 8 7 7 fill; border-style: solid; border-width: 7px 8px 7px 7px; box-shadow: none;}.kom .close_kom b {background: url(/gfx/layout/tloPilot.png);}.exchange_win {overflow-y: auto;overflow-x: hidden;padding-right: 10px;box-sizing: border-box;}.exchange_win::-webkit-scrollbar {width: 13px;}.exchange_win::-webkit-scrollbar-track {background: #f0f0f0;border-radius: 10px;}.exchange_win::-webkit-scrollbar-thumb {background: #c0c0c0;border-radius: 10px;border: 2px solid transparent;background-clip: content-box;}.exchange_win {scrollbar-width: thin;scrollbar-color: #c0c0c0 #f0f0f0;}`);
                 this.addToCSS(`#emp_list .petopt_btns .newBtn{margin:0px 3px 3px 0px;} .newBtn.do_all_instances{color:#e5d029;}`);
                 this.addToCSS(`#quick_bar{z-index:4;} .qlink.kws_active_icon{animation-name:kws_active_icon;animation-duration:1s;animation-iteration-count:infinite;}@keyframes kws_active_icon { 0% { filter: hue-rotate(168deg); } 50% { filter:hue-rotate(40deg); } 100% { filter: hue-rotate(168deg); } } .sideIcons{ width:29px; height:29px; left:-37px; background-size:contain; } .autoExpeCodes{background:#12121294; border:1px solid rgb(87, 87, 114); border-radius:5px 0px 0px 5px; position:absolute; top:-100px; left:-97px; padding:5px; display:none; color:#ffe500c7; user-select:none;} .manage_autoExpeditions:hover + .autoExpeCodes, .autoExpeCodes:hover{ display:flex; } .autoExpeCodes .newCheckbox{margin: 0 auto; display: block;} `);
                 this.addToCSS(`.kws_active_button{animation-name:kws_active_icon;animation-duration:1s;animation-iteration-count:infinite;}@keyframes kws_active_button { 0% { filter: hue-rotate(168deg); } 50% { filter:hue-rotate(40deg); } 100% { filter: hue-rotate(168deg); } }`);
-                this.addToCSS(`#secondary_char_stats .instance{margin-top:10px; cursor:pointer; width:100px;} #secondary_char_stats .activities{margin-top:-5px; cursor:pointer; width:100px;} #secondary_char_stats ul {margin-top:-18px; margin-left:-18px;} .ico.a11{background:url("https://raw.githubusercontent.com/rkurski/boliMnieNoga/main-3.5/instances.png"); background-repeat: no-repeat; background-size: inherit; background-position: center;} .ico.a12{background-image: url(https://raw.githubusercontent.com/rkurski/boliMnieNoga/main-3.5/activity.png); background-repeat: no-repeat; background-size: inherit; background-position: center;}`);
+                this.addToCSS(`#secondary_char_stats .instance{margin-top:10px; cursor:pointer; width:100px;} #secondary_char_stats .activities{margin-top:-5px; cursor:pointer; width:100px;} #secondary_char_stats ul {margin-top:-18px; margin-left:-18px;} .ico.a11{background:url("https://raw.githubusercontent.com/rkurski/boliMnieNoga/grudzien2024/instances.png"); background-repeat: no-repeat; background-size: inherit; background-position: center;} .ico.a12{background-image: url(https://raw.githubusercontent.com/rkurski/boliMnieNoga/grudzien2024/activity.png); background-repeat: no-repeat; background-size: inherit; background-position: center;}`); 
                 this.addToCSS(`.ssj_uio{background:url("https://i.imgur.com/EcfEUcG.png");}`);
                 this.addToCSS(`#quick_allTransformations { position:absolute; top:33px; z-index:1; background:rgb(0 0 0 / 59%); display:none; flex-direction: column-reverse; padding:5px 5px 0px 5px; border-radius:5px; box-shadow:0px 0px 5px 0px rgb(32 96 185);} .show_qat:hover + #quick_allTransformations, #quick_allTransformations:hover { display:flex; } #quick_allTransformations .option { display:block; margin:0px 0px 5px 0px; }`);
                 this.addToCSS(`#player_list_con .glory_rank.war{animation:none !important;background-color:rgb(22 83 106);box-shadow:0px 0px 7px 0px rgb(0 253 255);} .player_clan.enemy img{animation:none !important;box-shadow:0px 0px 10px 1px rgb(0 253 255);}`);
@@ -133,7 +133,7 @@ if (typeof GAME === 'undefined') { } else {
                 }, 200);
             }
             loadRiddles(cb) {
-                fetch(`https://raw.githubusercontent.com/rkurski/boliMnieNoga/main-3.5/riddles.json`).then(res => res.json()).then((out) => {
+                fetch(`https://raw.githubusercontent.com/rkurski/boliMnieNoga/grudzien2024/riddles.json`).then(res => res.json()).then((out) => {
                     cb(out)
                 }).catch(err => {
                     throw err
@@ -464,16 +464,16 @@ if (typeof GAME === 'undefined') { } else {
                 let arr = $.map($('.use_buff:checked'), function (e, i) { return +e.value; });
                 let btype = $('input[name="bless_type"]:checked').val();
                 GAME.socket.emit('ga', {
-                    a: 14,
-                    type: 5,
-                    buffs: arr,
-                    players: $('#bless_players').val(),
-                    btype: btype
+                  a: 14,
+                  type: 5,
+                  buffs: arr,
+                  players: $('#bless_players').val(),
+                  btype: btype
                 });
                 function komunikat() {
                     kom_clear();
-                }
-                setTimeout(() => {
+                  }
+                  setTimeout(() => {
                     komunikat();
                 }, 1000);
             }
@@ -1173,7 +1173,7 @@ if (typeof GAME === 'undefined') { } else {
                 switch (res.a) {
                     case 7: //?? PvP fight result?
                         if (!this.stopped) {
-                            if ("result" in res && res.result && "reward" in res.result && res.result.reward && "arena_exp" in res.result.reward && res.result.reward.arena_exp && res.result.result === 1) {
+                            if("result" in res && res.result && "reward" in res.result && res.result.reward && "arena_exp" in res.result.reward && res.result.reward.arena_exp && res.result.result === 1) {
                                 this.arena_count();
                             } else if ("result" in res && res.result && "reward" in res.result && res.result.reward && "empire_war" in res.result.reward && res.result.reward.empire_war && res.result.result === 1) {
                                 this.pvp_count();
@@ -1184,7 +1184,7 @@ if (typeof GAME === 'undefined') { } else {
                             break;
                         }
                     case 57: //Tournament related
-                        if (res.tours) {
+                        if(res.tours) {
                             if (res.a === 57 && res.tours) {
                                 const foundCatObject = res.tours.find(tour => tour.cat === this.tournamentCategory);
                                 if (foundCatObject) {
@@ -1241,7 +1241,7 @@ if (typeof GAME === 'undefined') { } else {
                             let closeKomElement = document.querySelector("#kom_con > div > div.close_kom");
                             if (closeKomElement && !closeKomElement.hasAttribute("data-close-handler")) {
                                 closeKomElement.setAttribute("data-close-handler", "true");
-                                closeKomElement.addEventListener("click", () => { kom_clear(); });
+                                closeKomElement.addEventListener("click", () => {kom_clear();});
                             }
                         } else {
                             console.error('Element .game-komunikat nie istnieje!');
@@ -1253,15 +1253,15 @@ if (typeof GAME === 'undefined') { } else {
                         GAME.komunikat("Zaprzestałeś robienia Wiedzy.");
                     }
                 });
-
+                
                 $("body").on("click", '.mborn', () => {
                     knowStatus = true;
-                    GAME.socket.emit('ga', { a: 9, type: 3, nid: 382 });
+                    GAME.socket.emit('ga',{a:9,type:3,nid:382});
                     mbornInterval = setInterval(wiedza_M, 60000);
-                    function wiedza_M() {
-                        if (knowStatus) {
+                    function wiedza_M(){
+                        if(knowStatus) {
                             if (GAME.char_tables.timed_actions[0] == undefined || GAME.char_tables.timed_actions[1] == undefined && GAME.char_data.bonus16 > GAME.getTime()) {
-                                GAME.socket.emit('ga', { a: 9, type: 3, nid: 382 });
+                                GAME.socket.emit('ga', {a: 9, type: 3, nid:382});
                                 kom_clear();
                             } else {
                                 console.log("Wiedza trwa.")
@@ -1271,12 +1271,12 @@ if (typeof GAME === 'undefined') { } else {
                 });
                 $("body").on("click", '.gohan', () => {
                     knowStatus = true;
-                    GAME.socket.emit('ga', { a: 9, type: 3, nid: 288 });
+                    GAME.socket.emit('ga',{a:9,type:3,nid:288});
                     gohanInterval = setInterval(wiedza_gohan, 60000);
-                    function wiedza_gohan() {
-                        if (knowStatus) {
+                    function wiedza_gohan(){
+                        if(knowStatus) {
                             if (GAME.char_tables.timed_actions[0] == undefined || GAME.char_tables.timed_actions[1] == undefined && GAME.char_data.bonus16 > GAME.getTime()) {
-                                GAME.socket.emit('ga', { a: 9, type: 3, nid: 288 });
+                                GAME.socket.emit('ga', {a: 9, type: 3, nid:288});
                                 kom_clear();
                             } else {
                                 console.log("Wiedza trwa.")
@@ -1285,7 +1285,7 @@ if (typeof GAME === 'undefined') { } else {
                     }
                 });
                 //
-                $("body").on("click", ".activate_all_clan_buffs", () => {
+                    $("body").on("click", ".activate_all_clan_buffs", () => {
                     this.activateAllClanBuffs();
                 });
                 $("body").on("click", ".do_all_instances", (event) => {
@@ -1636,7 +1636,7 @@ if (typeof GAME === 'undefined') { } else {
                 $("body").on("click", ".qlink.load_afo", () => {
                     if (typeof this.afo_is_loaded == 'undefined') {
                         this.afo_is_loaded = true;
-                        $.get("https://raw.githubusercontent.com/rkurski/boliMnieNoga/main-3.5/uncodedeeee.js", (data) => {
+                        $.get("https://raw.githubusercontent.com/rkurski/boliMnieNoga/grudzien2024/uncodedeeee.js", (data) => {
                             $("body").append(`<script>${data}<\/script>`);
                         }).fail(() => {
                             GAME.komunikat("Wystąpił błąd w ładowaniu skryptu, odśwież stronę i spróbuj ponownie!");
@@ -1722,57 +1722,57 @@ if (typeof GAME === 'undefined') { } else {
             }
             prepareFutureStatsData() {
                 let staty = GAME.char_data;
-                if (staty.reborn == 0) {
-                    var moc = staty.sila + staty.szyb + staty.wytrz + staty.swoli + staty.ki;
-                    var fb = Math.round(moc / 10000000, 3);
+                if(staty.reborn==0){
+                    var moc=staty.sila+staty.szyb+staty.wytrz+staty.swoli+staty.ki;
+                    var fb=Math.round(moc/10000000,3);
                     return `${LNG.lab166} : <span class="orange">${GAME.dots(fb)}</span>`;
                 }
-                if (staty.reborn == 1) {
-                    var expm = Math.round(staty.exp / 5000), mocm = Math.round(staty.moc / 10);
-                    var fb = expm + mocm;
+                if(staty.reborn==1){
+                    var expm=Math.round(staty.exp/5000),mocm=Math.round(staty.moc/10);
+                    var fb=expm+mocm;
                     return `${LNG.lab167} : <span class="orange" id="future_wspol">${GAME.dots(fb)}</span> [${LNG.lab217}: <span class="green">${GAME.dots(mocm)}</span>, ${LNG.lab218}: <span class="green">${GAME.dots(expm)}</span>]`;
                 }
-                if (staty.reborn == 2) {
-                    var ps = 0;
-                    var moc = staty.sila + staty.szyb + staty.wytrz + staty.swoli + staty.ki;
-                    var mocm = Math.round(moc / 100000000000);
-                    if (mocm > 1000) mocm = 1000;
-                    ps += mocm;
-                    var wsplm = Math.round(staty.reborn_bonus / 100);
-                    if (wsplm > 1000) wsplm = 1000;
-                    ps += wsplm;
-                    var fb = Math.round(staty.god / 10000);
+                if(staty.reborn==2){
+                    var ps=0;
+                    var moc=staty.sila+staty.szyb+staty.wytrz+staty.swoli+staty.ki;
+                    var mocm=Math.round(moc/100000000000);
+                    if(mocm>1000) mocm=1000;
+                    ps+=mocm;
+                    var wsplm=Math.round(staty.reborn_bonus/100);
+                    if(wsplm>1000) wsplm=1000;
+                    ps+=wsplm;
+                    var fb=Math.round(staty.god/10000);
                     return `${LNG.lab168} : <span class="orange">${GAME.dots(fb)}</span> ${LNG.lab220} : <span class="orange">${GAME.dots(ps)}</span> [${LNG.lab217}: <span class="green">${GAME.dots(mocm)}</span>, ${LNG.lab219}: <span class="green">${GAME.dots(wsplm)}</span>]`;
                 }
-                if (staty.reborn == 3) {
-                    var gki = 1000;
-                    var wtam = Math.floor(staty.wta / 100000000000);
-                    gki += wtam;
-                    var moc = staty.sila + staty.szyb + staty.wytrz + staty.swoli + staty.ki;
-                    var mocm1 = Math.round(moc / 10000000000000);
-                    gki += mocm1;
-                    if (gki > 1000000) gki = 1000000;
-                    var ps = 10;
-                    var levm = Math.floor(staty.level / 200);
-                    ps += levm;
-                    var moc = staty.sila + staty.szyb + staty.wytrz + staty.swoli + staty.ki + staty.wta;
-                    var mocm2 = Math.floor(moc / 10000000000000000);
-                    ps += mocm2;
-                    if (ps > 150) ps = 150;
+                if(staty.reborn==3){
+                    var gki=1000;
+                    var wtam=Math.floor(staty.wta/100000000000);
+                    gki+=wtam;
+                    var moc=staty.sila+staty.szyb+staty.wytrz+staty.swoli+staty.ki;
+                    var mocm1=Math.round(moc/10000000000000);
+                    gki+=mocm1;
+                    if(gki>1000000) gki=1000000;
+                    var ps=10;
+                    var levm=Math.floor(staty.level/200);
+                    ps+=levm;
+                    var moc=staty.sila+staty.szyb+staty.wytrz+staty.swoli+staty.ki+staty.wta;
+                    var mocm2=Math.floor(moc/10000000000000000);
+                    ps+=mocm2;
+                    if(ps>150) ps=150;
                     return `${LNG.lab169} : <span class="orange">${GAME.dots(gki)}</span> [1000 + ${LNG.lab217}: <span class="green">${GAME.dots(mocm1)}</span>, ${LNG.lab221}: <span class="green">${GAME.dots(wtam)}</span>] ${LNG.lab170} : <span class="orange">${GAME.dots(ps)}</span> [10+ ${LNG.lab217}: <span class="green">${GAME.dots(mocm2)}</span>, ${LNG.lab222}: <span class="green">${GAME.dots(levm)}</span>]`;
                 }
-                if (staty.reborn == 4) {
-                    var ins = 10;
-                    var wtam = Math.floor(staty.wta / 1000000000000);
-                    ins += wtam;
-                    var gkid = staty.gki / 1000;
-                    ins += gkid;
-                    if (ins > 100000) ins = 100000;
+                if(staty.reborn==4){
+                    var ins=10;
+                    var wtam=Math.floor(staty.wta/1000000000000);
+                    ins+=wtam;
+                    var gkid=staty.gki/1000;
+                    ins+=gkid;
+                    if(ins>100000) ins=100000;
                     return `${LNG.lab434} : <span class="orange">${GAME.dots(ins)}</span> [10 + ${LNG.lab435}: <span class="green">${GAME.dots(gkid)}</span>, ${LNG.lab221}: <span class="green">${GAME.dots(wtam)}</span>]`;
                 }
             }
             handleAdditionalTopBarVisibility() {
-                if (this.additionalTopBarVisible) {
+                if(this.additionalTopBarVisible) {
                     this.hideAdditionalTopBar();
                     this.additionalTopBarVisible = false;
                 } else {
@@ -1807,11 +1807,11 @@ if (typeof GAME === 'undefined') { } else {
             checkTournamentsSigning() {
                 if(this.isCheckingTournaments) { return; }
                 this.isCheckingTournaments = true;
-                var currentServerTime = new Date(GAME.getTime() * 1000);
+                var currentServerTime = new Date(GAME.getTime()*1000);
                 var currentServerHour = currentServerTime.getHours();
                 var currentServerMinute = currentServerTime.getMinutes();
                 //console.log("KWA_TOURNAMENTS: Check tournaments sign");
-                if (currentServerHour > 20 || currentServerHour < 18) {
+                if(currentServerHour > 20 || currentServerHour < 18) {
                     //console.log("KWA_TOURNAMENTS: Wrong hours, reset values");
                     this.tourSigned = false;
                     this.tournamentCategory = undefined;
@@ -1827,13 +1827,13 @@ if (typeof GAME === 'undefined') { } else {
                         setTimeout(() => {
                             //console.log("KWA_TOURNAMENTS: fetch tournaments IDs");
                             if (this.tournamentCategory <= 54) {
-                                GAME.emitOrder({ a: 57, type: 0, type2: 0, page: 1 });
+                                GAME.emitOrder({a: 57, type: 0, type2: 0, page: 1});
                             } else {
-                                GAME.emitOrder({ a: 57, type: 0, type2: 0, page: 2 });
+                                GAME.emitOrder({a: 57, type: 0, type2: 0, page: 2});
                             }
                         }, 500);
-                        setTimeout(() => { /*console.log("KWA_TOURNAMENTS: sign in player");*/GAME.emitOrder({ a: 57, type: 1, tid: this.newTournamentID }); }, 1000);
-                        setTimeout(() => { /*console.log("KWA_TOURNAMENTS: sign in all pets");*/GAME.emitOrder({ a: 57, type: 4 }); }, 1500);
+                        setTimeout(() => { /*console.log("KWA_TOURNAMENTS: sign in player");*/GAME.emitOrder({a: 57, type: 1, tid: this.newTournamentID}); }, 1000);
+                        setTimeout(() => { /*console.log("KWA_TOURNAMENTS: sign in all pets");*/GAME.emitOrder({a: 57, type: 4}); }, 1500);
                         setTimeout(() => { /*console.log("KWA_TOURNAMENTS: clear popups");*/kom_clear(); }, 2000);
                         setTimeout(() => { this.setTimerForTournamentsReset(); }, 5000);
                     } else {
@@ -1842,7 +1842,7 @@ if (typeof GAME === 'undefined') { } else {
                 }
             }
             setTimerForTournamentsReset() {
-                //console.log("KWA_TOURNAMENTS: reset isCheckingTournaments flag");
+               //console.log("KWA_TOURNAMENTS: reset isCheckingTournaments flag");
                 this.isCheckingTournaments = false;
             }
             createAlternativePilot() {
@@ -1943,8 +1943,8 @@ if (typeof GAME === 'undefined') { } else {
                 $('#map_canvas_container').append("<div style='position:absolute; top:684px; left:225px; z-index:999;'><button id='klawiszc' style='width: 70px; height: 70px; border-radius: 5px; border: 2px solid white; padding: 5px; background-color: black; color: white; cursor: pointer; font-size: 50px;'>C</button></div>");
                 $('.clearfix').append('<div id="map_canvas_container" style="position:absolute; top:731px; left:59px; "></div>');
                 $('#map_canvas_container').append("<div style='position:absolute; top:761px; left:100px; z-index:999;'><button id='klawiszr' style='width: 70px; height: 70px; border-radius: 5px; border: 2px solid white; padding: 5px; background-color: black; color: white; cursor: pointer; font-size: 50px;'>R</button></div>");
-                $('.clearfix').append('<div id="map_canvas_container" style="position:absolute; top:731px; left:59px; "></div>');
-                $('#map_canvas_container').append("<div style='position:absolute; top:761px; left:11px; z-index:999;'><button id='klawiszy' style='width: 70px; height: 70px; border-radius: 5px; border: 2px solid white; padding: 5px; background-color: black; color: white; cursor: pointer; font-size: 50px;'>Y</button></div>");
+                $('.clearfix').append('<div id="map_canvas_container" style="position:absolute; top:731px; left:59px; "></div>');                 
+                $('#map_canvas_container').append("<div style='position:absolute; top:761px; left:11px; z-index:999;'><button id='klawiszy' style='width: 70px; height: 70px; border-radius: 5px; border: 2px solid white; padding: 5px; background-color: black; color: white; cursor: pointer; font-size: 50px;'>Y</button></div>");                 
                 $('.clearfix').append('<div id="map_canvas_container" style="position:absolute; top:731px; left:59px; "></div>');
                 $('#map_canvas_container').append("<div style='position:absolute; top:761px; left:189px; z-index:999;'><button id='klawiszv' style='width: 70px; height: 70px; border-radius: 5px; border: 2px solid white; padding: 5px; background-color: black; color: white; cursor: pointer; font-size: 50px;'>V</button></div>");
                 $('.clearfix').append('<div id="map_canvas_container" style="position:absolute; top:731px; left:59px; "></div>');
@@ -2209,10 +2209,6 @@ if (typeof GAME === 'undefined') { } else {
             }
             adjustCurrentCharacterId() {
                 var thisCharId = GAME.char_id;
-                if (this.charactersManager.currentCharacterId === undefined) {
-                    this.charactersManager.setCurrentCharacterId(thisCharId);
-                    return;
-                }
                 if (thisCharId != this.charactersManager.currentCharacterId) {
                     this.charactersManager.setCurrentCharacterId(thisCharId);
                 }
@@ -2239,7 +2235,7 @@ if (typeof GAME === 'undefined') { } else {
                     this.tourSigned = false;
                     this.tournamentCategory = undefined;
                     this.newTournamentID = undefined;
-                    // this.isCheckingTournaments = false;
+                    this.isCheckingTournaments = false;
                 }, 1000);
             }
         }
@@ -2651,7 +2647,7 @@ if (typeof GAME === 'undefined') { } else {
         let roll2 = false;
         let roll1 = false;
         let roll3 = false;
-        let version = '3.7.0';
+        let version = '3.7.2';
     }
     )
 }
