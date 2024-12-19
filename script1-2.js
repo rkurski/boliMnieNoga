@@ -29,6 +29,7 @@ if (typeof GAME === 'undefined') { } else {
     	    }
 	});
 
+
         class kwsv3 {
             constructor(charactersManager) {
                 this.charactersManager = charactersManager;
