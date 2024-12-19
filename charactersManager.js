@@ -3,6 +3,7 @@ class KwsCharactersManager {
         this.characters = [];
         this.currentCharacterId = 0;
         this.currentIndex = 0;
+        this.shouldReport = true;
     }
     setCurrentCharacterId(charId) {
         this.currentCharacterId = charId;
@@ -12,7 +13,7 @@ class KwsCharactersManager {
     }
     getNextCharId() {
         if (this.characters.length == 1) {
-            return this.currentCharacterId; 
+            return this.currentCharacterId;
         }
 
         var returnCharId;
@@ -41,25 +42,27 @@ class KwsCharactersManager {
         }
 
         this.setCurrentCharacterId(returnCharId);
-        
+
         return returnCharId;
     }
 }
 
 function getCharacters() {
-    if (typeof GAME === 'undefined') {
+    if ($("#server_choose").is(":visible")) {
+        if (this.shouldReport) {
+            $("#logout").eq(0).click();
+            this.shouldReport = false;
+        }
+    }
+    var allCharacters = [...$("li[data-option=select_char]")];
+    if (allCharacters.length == 0) {
         setTimeout(getCharacters, 200);
     } else {
-        var allCharacters = [...$("li[data-option=select_char]")];
-        if(allCharacters.length == 0) {
-            setTimeout(getCharacters, 200);
-        } else {
-            var kwsCharactersManager = new KwsCharactersManager();
-            allCharacters.forEach((element, index, array) => {
-                kwsCharactersManager.characters.push(element.getAttribute("data-char_id"));
-            });
-            kwsLocalCharacters = kwsCharactersManager;
-        }
+        var kwsCharactersManager = new KwsCharactersManager();
+        allCharacters.forEach((element, index, array) => {
+            kwsCharactersManager.characters.push(element.getAttribute("data-char_id"));
+        });
+        kwsLocalCharacters = kwsCharactersManager;
     }
 }
 
