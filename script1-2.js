@@ -29,6 +29,7 @@ if (typeof GAME === 'undefined') { } else {
     	    }
 	});
 
+
         class kwsv3 {
             constructor(charactersManager) {
                 this.charactersManager = charactersManager;
@@ -57,7 +58,7 @@ if (typeof GAME === 'undefined') { } else {
                 this.addToCSS(`#emp_list .petopt_btns .newBtn{margin:0px 3px 3px 0px;} .newBtn.do_all_instances{color:#e5d029;}`);
                 this.addToCSS(`#quick_bar{z-index:4;} .qlink.kws_active_icon{animation-name:kws_active_icon;animation-duration:1s;animation-iteration-count:infinite;}@keyframes kws_active_icon { 0% { filter: hue-rotate(168deg); } 50% { filter:hue-rotate(40deg); } 100% { filter: hue-rotate(168deg); } } .sideIcons{ width:29px; height:29px; left:-37px; background-size:contain; } .autoExpeCodes{background:#12121294; border:1px solid rgb(87, 87, 114); border-radius:5px 0px 0px 5px; position:absolute; top:-100px; left:-97px; padding:5px; display:none; color:#ffe500c7; user-select:none;} .manage_autoExpeditions:hover + .autoExpeCodes, .autoExpeCodes:hover{ display:flex; } .autoExpeCodes .newCheckbox{margin: 0 auto; display: block;} `);
                 this.addToCSS(`.kws_active_button{animation-name:kws_active_icon;animation-duration:1s;animation-iteration-count:infinite;}@keyframes kws_active_button { 0% { filter: hue-rotate(168deg); } 50% { filter:hue-rotate(40deg); } 100% { filter: hue-rotate(168deg); } }`);
-                this.addToCSS(`#secondary_char_stats .instance{margin-top:10px; cursor:pointer; width:100px;} #secondary_char_stats .activities{margin-top:-5px; cursor:pointer; width:100px;} #secondary_char_stats ul {margin-top:-18px; margin-left:-18px;} .ico.a11{background:url("https://raw.githubusercontent.com/rkurski/boliMnieNoga/grudzien2024/instances.png"); background-repeat: no-repeat; background-size: inherit; background-position: center;} .ico.a12{background-image: url(https://raw.githubusercontent.com/rkurski/boliMnieNoga/grudzien2024/activity.png); background-repeat: no-repeat; background-size: inherit; background-position: center;}`); 
+                this.addToCSS(`#secondary_char_stats .instance{margin-top:10px; cursor:pointer; width:100px;} #secondary_char_stats .activities{margin-top:-5px; cursor:pointer; width:100px;} #secondary_char_stats ul {margin-top:-18px; margin-left:-18px;} .ico.a11{background:url("https://raw.githubusercontent.com/rkurski/boliMnieNoga/main/instances.png"); background-repeat: no-repeat; background-size: inherit; background-position: center;} .ico.a12{background-image: url(https://raw.githubusercontent.com/rkurski/boliMnieNoga/main/activity.png); background-repeat: no-repeat; background-size: inherit; background-position: center;}`); 
                 this.addToCSS(`.ssj_uio{background:url("https://i.imgur.com/EcfEUcG.png");}`);
                 this.addToCSS(`#quick_allTransformations { position:absolute; top:33px; z-index:1; background:rgb(0 0 0 / 59%); display:none; flex-direction: column-reverse; padding:5px 5px 0px 5px; border-radius:5px; box-shadow:0px 0px 5px 0px rgb(32 96 185);} .show_qat:hover + #quick_allTransformations, #quick_allTransformations:hover { display:flex; } #quick_allTransformations .option { display:block; margin:0px 0px 5px 0px; }`);
                 this.addToCSS(`#player_list_con .glory_rank.war{animation:none !important;background-color:rgb(22 83 106);box-shadow:0px 0px 7px 0px rgb(0 253 255);} .player_clan.enemy img{animation:none !important;box-shadow:0px 0px 10px 1px rgb(0 253 255);}`);
@@ -133,7 +134,7 @@ if (typeof GAME === 'undefined') { } else {
                 }, 200);
             }
             loadRiddles(cb) {
-                fetch(`https://raw.githubusercontent.com/rkurski/boliMnieNoga/grudzien2024/riddles.json`).then(res => res.json()).then((out) => {
+                fetch(`https://raw.githubusercontent.com/rkurski/boliMnieNoga/main/riddles.json`).then(res => res.json()).then((out) => {
                     cb(out)
                 }).catch(err => {
                     throw err
@@ -1260,6 +1261,32 @@ if (typeof GAME === 'undefined') { } else {
                     mbornInterval = setInterval(wiedza_M, 60000);
                     function wiedza_M(){
                         if(knowStatus) {
+                            if ($("#train_uptime").find('.timer').length == 0 && !GAME.is_training && $("#timed_label").text().includes("Kontrola Chaosu") && GAME.char_tables.timed_actions[0] != undefined) {
+                                GAME.socket.emit('ga', {
+                                    a: 8,
+                                    type: 3
+                                });
+                            } else if ($("#train_uptime").find('.timer').length == 0 && !GAME.is_training) {
+                                GAME.socket.emit('ga', {
+                                    a: 8,
+                                    type: 2,
+                                    stat: 1,
+                                    duration: 1
+                                });
+                                setTimeout(() => {
+                                    GAME.socket.emit('ga', {
+                                        a: 8,
+                                        type: 5,
+                                        apud: 'vzaaa'
+                                    });
+                                }, 1500);
+                            } else if (GAME.is_training && $("#train_uptime").find('.timer').length == 1) {
+                                GAME.socket.emit('ga', {
+                                    a: 8,
+                                    type: 3
+                                });
+                            } else { }
+                
                             if (GAME.char_tables.timed_actions[0] == undefined || GAME.char_tables.timed_actions[1] == undefined && GAME.char_data.bonus16 > GAME.getTime()) {
                                 GAME.socket.emit('ga', {a: 9, type: 3, nid:382});
                                 kom_clear();
@@ -1636,7 +1663,7 @@ if (typeof GAME === 'undefined') { } else {
                 $("body").on("click", ".qlink.load_afo", () => {
                     if (typeof this.afo_is_loaded == 'undefined') {
                         this.afo_is_loaded = true;
-                        $.get("https://raw.githubusercontent.com/rkurski/boliMnieNoga/grudzien2024/uncodedeeee.js", (data) => {
+                        $.get("https://raw.githubusercontent.com/rkurski/boliMnieNoga/main/uncodedeeee.js", (data) => {
                             $("body").append(`<script>${data}<\/script>`);
                         }).fail(() => {
                             GAME.komunikat("Wystąpił błąd w ładowaniu skryptu, odśwież stronę i spróbuj ponownie!");
