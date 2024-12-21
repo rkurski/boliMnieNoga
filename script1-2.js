@@ -1261,6 +1261,32 @@ if (typeof GAME === 'undefined') { } else {
                     mbornInterval = setInterval(wiedza_M, 60000);
                     function wiedza_M(){
                         if(knowStatus) {
+                            if ($("#train_uptime").find('.timer').length == 0 && !GAME.is_training && $("#timed_label").text().includes("Kontrola Chaosu") && GAME.char_tables.timed_actions[0] != undefined) {
+                                GAME.socket.emit('ga', {
+                                    a: 8,
+                                    type: 3
+                                });
+                            } else if ($("#train_uptime").find('.timer').length == 0 && !GAME.is_training) {
+                                GAME.socket.emit('ga', {
+                                    a: 8,
+                                    type: 2,
+                                    stat: 1,
+                                    duration: 1
+                                });
+                                setTimeout(() => {
+                                    GAME.socket.emit('ga', {
+                                        a: 8,
+                                        type: 5,
+                                        apud: 'vzaaa'
+                                    });
+                                }, 1500);
+                            } else if (GAME.is_training && $("#train_uptime").find('.timer').length == 1) {
+                                GAME.socket.emit('ga', {
+                                    a: 8,
+                                    type: 3
+                                });
+                            } else { }
+                
                             if (GAME.char_tables.timed_actions[0] == undefined || GAME.char_tables.timed_actions[1] == undefined && GAME.char_data.bonus16 > GAME.getTime()) {
                                 GAME.socket.emit('ga', {a: 9, type: 3, nid:382});
                                 kom_clear();
