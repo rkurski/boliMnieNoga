@@ -1235,9 +1235,16 @@ if (typeof GAME === 'undefined') { } else {
                         let komunikatElement = document.querySelector('#kom_con .kom');
                         if (komunikatElement) {
                             if (!komunikatElement.querySelector('.gohan') && !komunikatElement.querySelector('.mborn')) {
-                                komunikatElement.innerHTML += `
-                                    <button class="newBtn gohan">Wiedza Gohan</button>
-                                    <button class="newBtn mborn">Wiedza MBorn</button>`;
+                                if (GAME.char_data.race == 7) {
+                                    komunikatElement.innerHTML += `
+                                        <button class="newBtn gohan">Wiedza Gohan</button>
+                                        <button class="newBtn mborn">Wiedza MBorn</button>
+                                        <button class="newBtn mbornKody">Wiedza MBorn + Kody</button>`;
+                                } else {
+                                    komunikatElement.innerHTML += `
+                                    <button class="newBtn mborn">Wiedza MBorn</button>
+                                    <button class="newBtn mbornKody">Wiedza MBorn + Kody</button>`;
+                                }
                             }
                             let closeKomElement = document.querySelector("#kom_con > div > div.close_kom");
                             if (closeKomElement && !closeKomElement.hasAttribute("data-close-handler")) {
@@ -1254,8 +1261,20 @@ if (typeof GAME === 'undefined') { } else {
                         GAME.komunikat("Zaprzestałeś robienia Wiedzy.");
                     }
                 });
-                
                 $("body").on("click", '.mborn', () => {
+                    knowStatus = true;
+                    GAME.socket.emit('ga',{a:9,type:3,nid:382});
+                    mbornInterval = setInterval(wiedza_M, 60000);
+                    function wiedza_M(){
+                        if(knowStatus) {
+                            if (GAME.char_tables.timed_actions[0] == undefined || GAME.char_tables.timed_actions[1] == undefined && GAME.char_data.bonus16 > GAME.getTime()) {
+                                GAME.socket.emit('ga', {a: 9, type: 3, nid:382});
+                                kom_clear();
+                            } else { }
+                        }
+                    }
+                });
+                $("body").on("click", '.mbornKody', () => {
                     knowStatus = true;
                     GAME.socket.emit('ga',{a:9,type:3,nid:382});
                     mbornInterval = setInterval(wiedza_M, 10000);
@@ -1285,17 +1304,10 @@ if (typeof GAME === 'undefined') { } else {
                                     a: 8,
                                     type: 3
                                 });
-                            } else if (GAME.char_tables.timed_actions[0] == undefined || GAME.char_tables.timed_actions[1] == undefined && GAME.char_data.bonus16 > GAME.getTime()) {
+                            } else if (GAME.char_tables.timed_actions[0] == undefined) {
                                     GAME.socket.emit('ga', {a: 9, type: 3, nid:382});
                                     kom_clear();
-                            } else { console.log("Wiedza trwa.") }
-                
-                            // if (GAME.char_tables.timed_actions[0] == undefined || GAME.char_tables.timed_actions[1] == undefined && GAME.char_data.bonus16 > GAME.getTime()) {
-                            //     GAME.socket.emit('ga', {a: 9, type: 3, nid:382});
-                            //     kom_clear();
-                            // } else {
-                            //     console.log("Wiedza trwa.")
-                            // }
+                            } else { }
                         }
                     }
                 });
@@ -2347,7 +2359,7 @@ if (typeof GAME === 'undefined') { } else {
             pvp_count = 0;
             kws.getCardSetsNames();
             setTimeout(() => {
-                if ((GAME.char_data.reborn == 4 || GAME.char_data.reborn == 5) && GAME.char_data.alt_transform_expiry < GAME.getTime()) {
+                if ((GAME.char_data.reborn == 4 || GAME.char_data.reborn == 5 || GAME.char_data.reborn == 6) && GAME.char_data.alt_transform_expiry < GAME.getTime()) {
                     GAME.socket.emit('ga', {
                         a: 18,
                         type: 8,
