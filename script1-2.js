@@ -1,4 +1,5 @@
 var checked = false;
+var latency = -1;
 
 if (typeof GAME === 'undefined') { } else {
     let Pog = setInterval(() => {
@@ -28,7 +29,6 @@ if (typeof GAME === 'undefined') { } else {
                 window.a24value = match[1];
     	    }
 	});
-
 
         class kwsv3 {
             constructor(charactersManager) {
@@ -781,6 +781,7 @@ if (typeof GAME === 'undefined') { } else {
                 }, 100);
             }
             updateTopBar() {
+		GAME.socket.io.engine.pingInterval = 1000;
                 let sk_status;
                 let instances = [];
                 let currentLevel = GAME.char_data.level;
@@ -807,11 +808,28 @@ if (typeof GAME === 'undefined') { } else {
                 let received = $("#act_prizes").find("div.act_prize.disabled").length;
                 let is_trader = new Date();
                 let trader = `<span class='kws_top_bar_section trader_info' style='cursor:pointer;'>HANDLARZ</span> `;
+		var latencyColor;
+		switch(true) {
+		    case (latency < 51):
+			latencyColor = "lime"
+		        break;
+		    case (latency < 100):
+			latencyColor = "yellow"
+		        break;
+		    case (latency < 140):
+			latencyColor = "orange"
+		        break;
+		    default:
+			latencyColor = "red"
+			break;
+		}
+		let latencyElement = `<span class='kws_top_bar_section latencyElement' style='cursor:pointer;color:${latencyColor}'>⇅${latency}</span>`;
+                let additionalStats = `<span class='kws_top_bar_section additional_stats' style='cursor:pointer;color:${this.additionalTopBarVisible ? "orange" : "white"}'>STATY</span>`;
                 let instance = `${sum_instances}/12`;
                 $("#secondary_char_stats .instance ul").html(instance);
                 let activities = `${activity}/185 (${received}/5)`;
                 $("#secondary_char_stats .activities ul").html(activities);
-                let innerHTML = ` <span class='kws_top_bar_section sk_info' style='cursor:pointer;'>SK: <span style="color:${sk_status == "AKTYWNE" ? "lime" : "white"};">${sk_status}</span></span> <span class='kws_top_bar_section train_upgr_info' style='cursor:pointer;'>KODY: <span style="color:${train_upgr == "AKTYWNE" ? "lime" : "white"};">${train_upgr}</span></span><span class='kws_top_bar_section lvl' style='cursor:pointer;'>LVL: <span>${lvlh}/H</span></span><span class='kws_top_bar_section pvp' style='cursor:pointer;'>PVP: <span>${pvp_count}</span></span><span class='kws_top_bar_section arena' style='cursor:pointer;'>ARENA: <span>${arena_count}</span></span> ${is_trader.getDay() == 6 ? trader : ''}<span class='kws_top_bar_section version' style='cursor:pointer;'>Wersja: <span>${version}</span></span> `;
+                let innerHTML = ` <span class='kws_top_bar_section sk_info' style='cursor:pointer;'>SK: <span style="color:${sk_status == "AKTYWNE" ? "lime" : "white"};">${sk_status}</span></span> <span class='kws_top_bar_section train_upgr_info' style='cursor:pointer;'>KODY: <span style="color:${train_upgr == "AKTYWNE" ? "lime" : "white"};">${train_upgr}</span></span><span class='kws_top_bar_section lvl' style='cursor:pointer;'>LVL: <span>${lvlh}/H</span></span><span class='kws_top_bar_section pvp' style='cursor:pointer;'>PVP: <span>${pvp_count}</span></span><span class='kws_top_bar_section arena' style='cursor:pointer;'>ARENA: <span>${arena_count}</span></span> ${is_trader.getDay() == 6 ? trader : ''} ${additionalStats} <span class='kws_top_bar_section version' style='cursor:pointer;'>v<span>${version}</span></span> ${latencyElement}`;
                 $(".kws_top_bar").html(innerHTML);
                 if (this.baselinePower == undefined) {
                     this.baselinePower = GAME.char_data.moc;
@@ -2281,6 +2299,9 @@ if (typeof GAME === 'undefined') { } else {
                 }, 1000);
             }
         }
+        GAME.socket.on('pong', function(ms) {
+            latency = ms;
+        });
         const kws = new kwsv3(kwsLocalCharacters);
         GAME.komunikat2 = function (kom) {
             if (this.koms.indexOf(kom) == -1) {
@@ -2689,7 +2710,7 @@ if (typeof GAME === 'undefined') { } else {
         let roll2 = false;
         let roll1 = false;
         let roll3 = false;
-        let version = '3.7.2';
+        let version = '3.7.3';
     }
     )
 }
