@@ -2383,7 +2383,7 @@ if (typeof GAME === 'undefined') { } else {
             pvp_count = 0;
             kws.getCardSetsNames();
             setTimeout(() => {
-                if ((GAME.pid !== '59314' && GAME.char_data.reborn == 4 || GAME.char_data.reborn == 5 || GAME.char_data.reborn == 6) && GAME.char_data.alt_transform_expiry < GAME.getTime()) {
+                if (GAME.pid != 59314 && (GAME.char_data.reborn == 4 || GAME.char_data.reborn == 5 || GAME.char_data.reborn == 6) && GAME.char_data.alt_transform_expiry < GAME.getTime()) {
                     GAME.socket.emit('ga', {
                         a: 18,
                         type: 8,
