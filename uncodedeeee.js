@@ -1,32 +1,4 @@
 if (typeof GAME === 'undefined') {} else {
-    function pvp_option_bind(){
-        $('.poption').off('click').on('click',function(){
-            var th=$(this);
-            if(th.is(':disabled')) return false;
-            th.tooltip('hide');
-            var option=th.data('option');
-            switch(option){
-                case 'show_player':
-                    GAME.emitOrder({a:34,type:0,char_id:th.data('char_id')});
-                break;
-                case 'show_clan':
-                    var klan_id=parseInt(th.data('klan_id'));
-                    GAME.emitOrder({a:40,klan_id:klan_id});
-                break;
-                case 'pvp_attack':
-                    GAME.emitOrder({a:window.a24value,char_id:th.data('char_id'),quick:th.data('quick')});
-                break;
-                case 'gpvp_attack':
-                    GAME.emitOrder({a:window.a24value,type:1,char_id:th.data('char_id'),quick:th.data('quick')});
-                break;
-                case 'load_more_players':
-                    GAME.emitOrder({a:3,type:1,start:th.data('start_from'),vo:GAME.map_options.vo});
-                    $('.more_players').remove();
-                break;
-            }
-        });
-    }
-    
     let Pog = setInterval(() => {
             clearInterval(Pog);
 
@@ -1157,16 +1129,8 @@ if (typeof GAME === 'undefined') {} else {
                         PVP.check();
                         break;
                     case 3:
-                        PVP.caseNumber++;
-                        PVP.check_players();
-                        break;
-                    case 4:
-                        PVP.caseNumber++;
+                        PVP.caseNumber = 6;
                         PVP.kill_players();
-                        break;
-                    case 5:
-                        PVP.caseNumber++;
-                        PVP.check_players2();
                         break;
                     case 6:
                         PVP.caseNumber++;
@@ -1182,13 +1146,9 @@ if (typeof GAME === 'undefined') {} else {
                         break;
                     case 9:
                         PVP.caseNumber++;
-                        PVP.check_players2();
-                        break;
-                    case 10:
-                        PVP.caseNumber++;
                         PVP.dec_wars();
                         break;
-                    case 11:
+                    case 10:
                         PVP.caseNumber = 0;
                         PVP.go();
                     default:
@@ -1231,53 +1191,19 @@ if (typeof GAME === 'undefined') {} else {
             };
             PVP.kill_players = () => {
                 var enemy = $("#player_list_con").find(".player button" + "[data-quick=1]" + ":not(.initial_hide_forced)");
-                if ($("#player_list_con").find("[data-option=load_more_players]").length == 1) {
-                    $("#player_list_con").find("[data-option=load_more_players]").click();
-                    window.setTimeout(PVP.kill_players, PVP.czekajpvp / PVP.WSPP());
-                } else if (enemy.length == 0) {
-                    PVP.kill_players1();
-                    window.setTimeout(PVP.start, PVP.czekajpvp / PVP.WSPP() * (enemy.length) * 2);
-                } else if (PVP.licznik < $("#player_list_con .player").length) {
-                    if ($("#player_list_con .player").eq(PVP.licznik).find("[data-quick=1]").attr("data-option").includes("gxxx")) {
-                        GAME.socket.emit('ga', {
-                            a: window.a24value,
-                            type: 1,
-                            char_id: $("#player_list_con .player").eq(PVP.licznik).find("[data-quick=1]").attr("data-char_id"),
-                            quick: 1
-                        });
-                        PVP.licznik++;
-                        window.setTimeout(PVP.kill_players, PVP.czekajpvp / PVP.WSPP());
-                    } else {
-                        GAME.socket.emit('ga', {
-                            a: window.a24value,
-                            char_id: $("#player_list_con .player").eq(PVP.licznik).find("[data-quick=1]").attr("data-char_id"),
-                            quick: 1
-                        });
-                        PVP.licznik++;
-                        window.setTimeout(PVP.kill_players, PVP.czekajpvp / PVP.WSPP());
-                    }
+                if (enemy.length > 0) {
+                    enemy.eq(0).click();
                 } else {
-                    window.setTimeout(PVP.start, PVP.wait / PVP.WSPP());
-                    PVP.licznik = 0;
                     kom_clear();
                 }
+                window.setTimeout(PVP.start, PVP.wait / PVP.WSPP());
             };
             PVP.kill_players1 = () => {
                 if (!JQS.chm.is(":focus")) {
                     var enemy = $("#player_list_con").find(".player button" + "[data-quick=1]" + ":not(.initial_hide_forced)");
-                    var bbb = $("#player_list_con").find(".player button" + "[data-option=gpvp_attack]" + "[data-quick=1]" + ":not(.initial_hide_forced)");
-                    var bbbb = parseInt(bbb.attr("data-char_id"));
                     if ($("#player_list_con").find("[data-option=load_more_players]").length == 1) {
                         $("#player_list_con").find("[data-option=load_more_players]").click();
                         window.setTimeout(PVP.kill_players1, 50);
-                    } else if (bbb.length > 0) {
-                        GAME.socket.emit('ga', {
-                            a: window.a24value,
-                            type: 1,
-                            char_id: bbbb,
-                            quick: 1
-                        });
-                        window.setTimeout(PVP.kill_players1, 110);
                     } else if (enemy.length > 0) {
                         enemy.eq(0).click();
                         window.setTimeout(PVP.kill_players1, 110);
@@ -1547,43 +1473,17 @@ if (typeof GAME === 'undefined') {} else {
                 if ($("#pvp_Panel input[name=speed_capt]").val() == '') speed = 50;
                 return speed / 50;
             };
+            GAME.parseListPlayer_o = GAME.parseListPlayer;
             GAME.parseListPlayer = function (entry, pvp_master) {
                 var res = '';
                 if (entry.data) {
                     var pd = entry.data;
                     if (PVP.higherRebornAvoid && pd.reborn > GAME.char_data.reborn && pd.reborn > 3){return res;}
                     if (!LOWLVL.stop && (pd.level < GAME.char_data.level)) { return res; }
-                    var pd = entry.data;
-                    var qb = '';
-                    var klan = '', erank = '';
-                    if (pd.klan_id) {
-                        var cls = '';
-                        if (this.clan_enemies.indexOf(pd.klan_id) != -1) cls = 'enemy';
-                        klan = '<b class="poption player_clan ' + cls + '" data-option="show_clan" data-klan_id="' + pd.klan_id + '">' + pd.klan_short + ' <img src="' + pd.emblem + '" /></b>';
-                    }
-                    var cls = '';
-                    if (entry.cd) {
-                        qb += this.showTimer(entry.cd - this.getTime(), 'data-special="10" data-pd="' + pd.id + '"', ' playercd' + pd.id + '');
-                        cls = 'initial_hide_forced playericons' + pd.id;
-                    }
-                    if (pd.empire) {
-                        var cls2 = '';
-                        if (this.emp_enemies.indexOf(pd.empire) != -1) {
-                            if (this.emp_enemies_t[pd.empire] == 1) cls2 = 'war';
-                            else if (this.empire_locations.indexOf(this.char_data.loc) != -1) cls2 = 'war';
-                        }
-                        if (!pd.glory_rank) pd.glory_rank = 1;
-                        erank = '<img src="/gfx/empire/ranks/' + pd.empire + '/' + pd.glory_rank + '.png" class="glory_rank ' + cls2 + '" />';
-                    }
-                    qb += '<button class="poption map_bicon ' + cls + '" data-option="pvp_attack" data-char_id="' + pd.id + '"><i class="ca"></i></button>';
-                    if (pvp_master) qb += '<button class="poption map_bicon ' + cls + '" data-option="pvp_attack" data-char_id="' + pd.id + '" data-quick="1"><i class="qa"></i></button>';
-                    res += '<div class="player"><div class="belka">' + erank + '<strong class="player_rank' + pd.ranga + ' poption" data-option="show_player" data-char_id="' + pd.id + '">' + pd.name + '</strong> <span>' + this.rebPref(pd.reborn) + pd.level + '</span> ' + klan + '</div><div id="pvp_opts_' + pd.id + '" class="right_btns">' + qb + '</div></div>';
                 }
-                else if (entry.more) {
-                    res += '<div class="more_players"><button class="poption" data-option="load_more_players" data-start_from="' + entry.next_from + '">+' + entry.more + '</button></div>';
-                }
-                return res;
+                return GAME.parseListPlayer_o(entry, pvp_master);
             };
+            GAME.parsePlayerShadow_o = GAME.parsePlayerShadow;
             GAME.parsePlayerShadow = function (data, pvp_master) {
                 var entry = data.data;
                 var res = '';
@@ -1591,31 +1491,8 @@ if (typeof GAME === 'undefined') {} else {
                     var pd = entry.data;
                     if ( PVP.higherRebornAvoid && pd.reborn > GAME.char_data.reborn && pd.reborn > 3){return res;}
                     if (!LOWLVL.stop && (pd.level < GAME.char_data.level)) { return res; }
-                    pd.empire = entry.empire;
-                    var qb = '';
-                    var erank = '';
-                    var cls = '';
-                    if (data.cd) {
-                        qb += this.showTimer(data.cd - this.getTime(), 'data-special="10" data-pd="' + pd.id + '"', ' playercd' + pd.id + '');
-                        cls = 'initial_hide_forced playericons' + pd.id;
-                    }
-                    if (pd.empire) {
-                        var cls2 = '';
-                        if (this.emp_enemies.indexOf(pd.empire) != -1) {
-                            if (this.emp_enemies_t[pd.empire] == 1) cls2 = 'war';
-                            else if (this.empire_locations.indexOf(this.char_data.loc) != -1) cls2 = 'war';
-                        }
-                        if (!pd.glory_rank) pd.glory_rank = 1;
-                        erank = '<img src="/gfx/empire/ranks/' + pd.empire + '/' + pd.glory_rank + '.png" class="glory_rank ' + cls2 + '" />';
-                    }
-                    qb += '<button class="poption map_bicon ' + cls + '" data-option="gpvp_attack" data-char_id="' + pd.id + '"><i class="ca"></i></button>';
-                    if (pvp_master) qb += '<button class="poption map_bicon ' + cls + '" data-option="gpvp_attack" data-char_id="' + pd.id + '" data-quick="1"><i class="qa"></i></button>';
-                    res += '<div class="player"><div class="belka">' + erank + '<strong class="player_rank' + pd.ranga + ' poption" data-option="show_player" data-char_id="' + pd.id + '">' + pd.name + ' - ' + LNG.lab348 + '</strong> <span>' + this.rebPref(pd.reborn) + pd.level + '</span> </div><div id="gpvp_opts_' + pd.id + '" class="right_btns">' + qb + '</div></div>';
                 }
-                else if (entry.more) {
-                    res += '<div class="more_players"><button class="poption" data-option="load_more_players" data-start_from="' + entry.next_from + '">+' + entry.more + '</button></div>';
-                }
-                return res;
+                return GAME.parsePlayerShadow_o(data, pvp_master)
             };
             var RESP = {
                 wait: 30,

@@ -843,7 +843,7 @@ if (typeof GAME === 'undefined') { } else {
                 let calculated_levels = GAME.dots(GAME.char_data.level - this.baselineLevel);
                 $(".kws_additional_top_bar").html(` <span class='kws_additional_top_bar_section pvm_power' style='cursor:pointer;'>ZDOBYTA MOC: <span style="color:lime;">${calculated_power}</span></span> <span class='kws_additional_top_bar_section future_stats' style='cursor:pointer;'>${futureStats.length > 0 ? futureStats: ''}</span><span class='kws_additional_top_bar_section lvlsGained' style='cursor:pointer;'>ZDOBYTE LVL: <span>${calculated_levels}</span></span><span class='kws_additional_top_bar_section psk' style='cursor:pointer;'>PSK: ${GAME.dots(GAME.char_data.minor_ball)}</span> ${calculatedPowerReset}`);
                 this.adjustCurrentCharacterId();
-                this.checkTournamentsSigning();
+                // this.checkTournamentsSigning();
             }
             collectActivities() {
                 let received = $("#act_prizes").find("div.act_prize.disabled").length;
@@ -1081,6 +1081,8 @@ if (typeof GAME === 'undefined') { } else {
                             type: 8,
                             mid: qb_id
                         });
+                    } else if ($(".quest_action").is(":visible")) {
+                        GAME.questAction() 
                     }
                     setTimeout(() => {
                         $('#fight_view').fadeOut();
