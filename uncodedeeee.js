@@ -1129,8 +1129,16 @@ if (typeof GAME === 'undefined') {} else {
                         PVP.check();
                         break;
                     case 3:
-                        PVP.caseNumber = 6;
+                        PVP.caseNumber++;
+                        PVP.check_players();
+                        break;
+                    case 4:
+                        PVP.caseNumber++;
                         PVP.kill_players();
+                        break;
+                    case 5:
+                        PVP.caseNumber++;
+                        PVP.check_players2();
                         break;
                     case 6:
                         PVP.caseNumber++;
@@ -1146,9 +1154,13 @@ if (typeof GAME === 'undefined') {} else {
                         break;
                     case 9:
                         PVP.caseNumber++;
-                        PVP.dec_wars();
+                        PVP.check_players2();
                         break;
                     case 10:
+                        PVP.caseNumber++;
+                        PVP.dec_wars();
+                        break;
+                    case 11:
                         PVP.caseNumber = 0;
                         PVP.go();
                     default:
