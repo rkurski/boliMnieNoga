@@ -109,6 +109,7 @@ if (typeof GAME === 'undefined') { } else {
                 $('.MoveIcon[data-option="map_quest_skip_time"]').after('<div class="MoveIcon bigg option" data-option="map_alternative_pilot" data-toggle="tooltip" data-original-title="<div class=tt>Ukryje pilota, pokazuje inną klawiaturę<br />Klawisz skrótu:<b class=orange>=</b></div>"><img src="https://up.be3.ovh/upload/1709400449.png"></div>');
                 $("#changeProfile").before('<button id="changeProfilePrev" class="btn_small_gold" data-option="prevChar">Prev</button>');
                 $("#changeProfile").after('<button id="changeProfileNext" class="btn_small_gold" data-option="nextChar">Next</button>');
+                $(`<button class="gold_button search_balls">ZBIERAJ KUKLE</button>`).insertBefore('button[data-option="db_page_switch"].active');
                 this.auto_abyss_interval = false;
                 this.auto_arena = false;
                 this.additionalTopBarVisible = false;
@@ -1781,6 +1782,17 @@ if (typeof GAME === 'undefined') { } else {
                         });
                     }
                 });
+                $("body").on("click", `.search_balls`, () => {
+                  if (!this.ball_search_active) {
+                      this.ball_search_active = true;
+                      $(".search_balls").addClass("kws_active_button").text("PRZEWIJ SZUKANIE");
+                      this.startBallSearch();
+                  } else {
+                      this.ball_search_active = false;
+                      $(".search_balls").removeClass("kws_active_button").text("SZUKAJ KUKLI");
+                      this.stopBallSearch("Przerwano");
+                  }
+              });
             }
             prepareFutureStatsData() {
                 let staty = GAME.char_data;
@@ -2303,6 +2315,354 @@ if (typeof GAME === 'undefined') { } else {
                     this.isCheckingTournaments = false;
                 }, 1000);
             }
+            // SZUKACZ KUKLI START
+            startBallSearch() {
+              if (typeof GAME === 'undefined' || typeof GAME.char_data === 'undefined') {
+                  GAME.komunikat("Error: Game data not available to start ball search.");
+                  return;
+              }
+    
+              this.ball_search_active = true;
+              this.ball_collected_count = 0;
+              this.ball_max_to_collect = 7;
+              this.ball_current_location_index = 0;
+              this.ball_locations_to_search = [];
+              this.ball_is_teleporting = false;
+              this.ball_is_moving = false;
+              this.ball_pickup_cooldown_active = false;
+              this.ball_pickup_cooldown_end_time = 0;
+              this.ball_location_change_cooldown_ms = 1500; // Default 1.5s
+    
+              this.clearBallSearchTimeouts();
+            
+              GAME.komunikat("SZUKACZ KUKLI: Szukanie start");
+              this.fetchEligibleLocations();
+              setTimeout(() => {
+                if (this.ball_locations_to_search.length === 0) {
+                    this.stopBallSearch("Jakiś bug przy pobraniu lokacji.");
+                    return;
+                }
+                GAME.komunikat(`SZUKACZ KUKLI: ${this.ball_locations_to_search.length} lokacji do sprawdzenia.`);
+                this.processNextLocation();
+              }, 3000);
+            }
+            stopBallSearch(reason) {
+                this.ball_search_active = false;
+                this.ball_is_teleporting = false;
+                this.ball_is_moving = false;
+                this.clearBallSearchTimeouts();
+                
+                GAME.komunikat("SZUKACZ KUKLI: Zatrzymano z powodu: " + reason);
+                $(".search_balls").removeClass("kws_active_button").text("SEARCH BALLS");
+            }
+            clearBallSearchTimeouts() {
+                if (this.ball_search_timeout_id) clearTimeout(this.ball_search_timeout_id);
+                this.ball_search_timeout_id = null;
+                if (this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
+                this.ball_movement_interval_id = null;
+                if (this.ball_cooldown_timeout_id) clearTimeout(this.ball_cooldown_timeout_id);
+                this.ball_cooldown_timeout_id = null;
+            }
+            fetchEligibleLocations() {
+                this.ball_locations_to_search = [];
+                if (typeof GAME === 'undefined' || typeof GAME.char_data === 'undefined') {
+                    console.error("BALL SEARCHER: GAME object or char_data not available for fetching locations.");
+                    return;
+                }
+
+                GAME.emitOrder({a: 19, type: 1});
+
+                setTimeout(() => {
+                    const currentPlayerReborn = GAME.char_data.reborn;
+                    let potentialLocationElements = [];
+
+                      const list = document.querySelector('#tp_list');
+
+                      if (list) {
+                          const items = list.querySelectorAll("[data-loc]");
+                          items.forEach(item => {
+                              const dataLocValue = item.getAttribute("data-loc");
+                              const dataRebornValue = item.getAttribute("data-reborn");
+
+                              if (dataLocValue && /^\d{1,4}$/.test(dataLocValue) && dataRebornValue == currentPlayerReborn) {
+                                  potentialLocationElements.push({ 
+                                      dataset: { loc: dataLocValue, reborn: dataRebornValue }, 
+                                      textContent: item.textContent || `Location ${dataLocValue}`
+                                  });
+                              }
+                          });
+                      }
+                    if (potentialLocationElements.length === 0) {
+                        GAME.komunikat("SZUKACZ KUKLI: BUG - nie udało się pobrać teleportów.");
+                        return;
+                    }
+                    this.ball_locations_to_search = potentialLocationElements.reverse();
+                    if (this.ball_locations_to_search.length > 0) {
+                        // GAME.komunikat(`BALL SEARCHER: Filtered ${this.ball_locations_to_search.length} locations for reborn ${currentPlayerReborn}.`);
+                    }
+                }, 2000); // Opóźnienie 2 sekundy
+            }
+
+            processNextLocation() {
+                if (!this.ball_search_active || this.ball_is_teleporting || this.ball_is_moving) return;
+                this.clearBallSearchTimeouts();
+
+                if (this.ball_collected_count >= this.ball_max_to_collect) {
+                    this.stopBallSearch(`Zebrano wszystkie kukle (${this.ball_max_to_collect}).`);
+                    return;
+                }
+
+                if (this.ball_current_location_index >= this.ball_locations_to_search.length) {
+                    this.stopBallSearch("Sprawdzono wszystkie lokacje.");
+                    return;
+                }
+
+                const locationToVisit = this.ball_locations_to_search[this.ball_current_location_index];
+                GAME.komunikat(`SZUKACZ KUKLI: (${this.ball_current_location_index + 1}/${this.ball_locations_to_search.length}) Sprawdza ${locationToVisit.textContent} (ID: ${locationToVisit.dataset.loc})`);
+                
+                if (String(GAME.char_data.loc) === String(locationToVisit.dataset.loc)) {
+                    this.checkForBallsOnMap();
+                } else {
+                    this.teleportToLocation(locationToVisit.dataset.loc);
+                }
+            }
+
+            teleportToLocation(locationId) {
+                if (typeof GAME === 'undefined' || typeof GAME.socket === 'undefined' || typeof GAME.socket.emit !== 'function') {
+                    GAME.komunikat("BALL SEARCHER: BUG i nie dziala teleport.");
+                    this.ball_current_location_index++;
+                    this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                    return;
+                }
+                
+                this.ball_is_teleporting = true;
+                const locationToVisit = this.ball_locations_to_search[this.ball_current_location_index]; // For logging
+                GAME.komunikat(`BALL SEARCHER: Teleporting to ${locationToVisit.textContent} (ID: ${locationId})...`);
+                GAME.socket.emit('ga', { a: 12, type: 18, loc: locationId });
+
+                let attempts = 0;
+                const maxAttempts = 10; 
+                const checkTeleportComplete = () => {
+                    if (!this.ball_search_active) { this.ball_is_teleporting = false; return; }
+                    attempts++;
+                    const teleported = (typeof GAME.is_loading !== 'undefined' && !GAME.is_loading && String(GAME.char_data.loc) === String(locationId)) || 
+                                      (typeof GAME.is_loading === 'undefined' && String(GAME.char_data.loc) === String(locationId));
+
+                    if (teleported) {
+                        this.ball_is_teleporting = false;
+                        GAME.komunikat(`BALL SEARCHER: Arrived at ${locationToVisit.name} (ID: ${locationId}).`);
+                        this.ball_search_timeout_id = setTimeout(() => this.checkForBallsOnMap(), 500); 
+                    } else if (attempts < maxAttempts) {
+                        this.ball_search_timeout_id = setTimeout(checkTeleportComplete, 500);
+                    } else {
+                        this.ball_is_teleporting = false;
+                        GAME.komunikat(`BALL SEARCHER: Teleport to ${locationToVisit.name} (ID: ${locationId}) timed out or failed.`);
+                        this.ball_current_location_index++;
+                        this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                    }
+                };
+                this.ball_search_timeout_id = setTimeout(checkTeleportComplete, 1000);
+            }
+
+            checkForBallsOnMap() {
+                if (!this.ball_search_active || typeof GAME.map_balls === 'undefined') {
+                    this.ball_current_location_index++;
+                    this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                    return;
+                }
+
+                if (this.ball_pickup_cooldown_active && this.getCurrentTimestamp() < this.ball_pickup_cooldown_end_time) {
+                    const waitTime = Math.ceil((this.ball_pickup_cooldown_end_time - this.getCurrentTimestamp()) / 1000);
+                    GAME.komunikat(`BALL SEARCHER: Pickup cooldown active. Waiting ${waitTime}s before checking for balls on this map.`);
+                    this.ball_cooldown_timeout_id = setTimeout(() => {
+                        this.ball_pickup_cooldown_active = false; 
+                        this.checkForBallsOnMap(); 
+                    }, waitTime * 1000 + 500); 
+                    return;
+                }
+
+                const ballKeys = Object.keys(GAME.map_balls);
+                if (ballKeys.length > 0) {
+                    const ballCoordsStr = ballKeys[0];
+                    const ballType = GAME.map_balls[ballCoordsStr];
+                    const [ballX, ballY] = ballCoordsStr.split('_').map(Number);
+                    GAME.komunikat(`BALL SEARCHER: Kukla! (type ${ballType}) wsp: ${ballX},${ballY}!`);
+                    this.navigateToBall({ x: ballX, y: ballY });
+                } else {
+                    GAME.komunikat("BALL SEARCHER: Brak kukli na mapie.");
+                    this.ball_current_location_index++;
+                    this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                }
+            }
+
+            navigateToBall(targetCoords) {
+                if (!this.ball_search_active || typeof GAME.char_data === 'undefined' || typeof GAME.socket === 'undefined' || this.ball_is_moving) {
+                    if(this.ball_search_active) {
+                        this.ball_current_location_index++;
+                        this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                    }
+                    return;
+                }
+
+                this.ball_is_moving = true;
+                this.ball_current_movement_target_coords = targetCoords;
+                GAME.komunikat(`BALL SEARCHER: Ide po kukle do ${targetCoords.x},${targetCoords.y}`);
+
+                if (this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
+
+                this.ball_movement_interval_id = setInterval(() => {
+                    if (!this.ball_search_active || !this.ball_is_moving) {
+                        if(this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
+                        this.ball_movement_interval_id = null;
+                        this.ball_is_moving = false;
+                        if(this.ball_search_active) {
+                            this.ball_current_location_index++;
+                            this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                        }
+                        return;
+                    }
+
+                    const px = GAME.char_data.x;
+                    const py = GAME.char_data.y;
+                    const targetX = this.ball_current_movement_target_coords.x;
+                    const targetY = this.ball_current_movement_target_coords.y;
+
+                    if (px == targetX && py == targetY) {
+                        if(this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
+                        this.ball_movement_interval_id = null;
+                        this.ball_is_moving = false;
+                        this.pickupBall();
+                        return;
+                    }
+
+                    let dx = targetX - px;
+                    let dy = targetY - py;
+                    let dir = 0;
+
+                    if (dx > 0 && dy > 0) dir = 3;      
+                    else if (dx < 0 && dy > 0) dir = 4; 
+                    else if (dx > 0 && dy < 0) dir = 5; 
+                    else if (dx < 0 && dy < 0) dir = 6; 
+                    else if (dx > 0) dir = 7;           
+                    else if (dx < 0) dir = 8;           
+                    else if (dy > 0) dir = 1;           
+                    else if (dy < 0) dir = 2;           
+                    
+                    if (dir !== 0) {
+                        GAME.socket.emit('ga', { a: 4, dir: dir, vo: (GAME.map_options ? GAME.map_options.vo : undefined) });
+                    } else {
+                        GAME.komunikat("BALL SEARCHER: BUG - nie doszedlem do kukli.");
+                        if(this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
+                        this.ball_movement_interval_id = null;
+                        this.ball_is_moving = false;
+                        this.ball_current_location_index++;
+                        this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                    }
+                }, 700 + Math.random() * 300);
+            }
+
+            pickupBall() {
+                if (!this.ball_search_active || typeof GAME === 'undefined' || typeof GAME.emitOrder !== 'function') {
+                    if(this.ball_search_active) {
+                        this.ball_current_location_index++;
+                        this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                    }
+                    return;
+                }
+
+                if (this.ball_pickup_cooldown_active && this.getCurrentTimestamp() < this.ball_pickup_cooldown_end_time) {
+                    const waitTime = Math.ceil((this.ball_pickup_cooldown_end_time - this.getCurrentTimestamp()) / 1000);
+                    GAME.komunikat(`BALL SEARCHER: Na kukli ale cooldown. Waiting ${waitTime}s.`);
+                    this.ball_cooldown_timeout_id = setTimeout(() => {
+                        this.ball_pickup_cooldown_active = false; 
+                        this.pickupBall(); 
+                    }, waitTime * 1000 + 500);
+                    return;
+                }
+                
+                const pickupButton = $('button.gold_button[data-option="pick_db"][data-id]');
+                if (pickupButton.length > 0) {
+                    const ballId = pickupButton.data('id');
+                    if (ballId) {
+                        GAME.komunikat(`BALL SEARCHER: Probuje podniesc kukle (item ID on map: ${ballId})`);
+                        GAME.emitOrder({ a: 33, type: 3, id: parseInt(ballId) });
+                        this.ball_last_pickup_attempt_time = this.getCurrentTimestamp();
+                        
+                        // Set up notification listener for ball pickup confirmation
+                        if (!this.ball_notification_listener_set) {
+                            this.ball_notification_listener_set = true;
+                            
+                            // Original socket listener for 'gr' events
+                            const originalGrHandler = GAME.socket._callbacks['$gr'] ? GAME.socket._callbacks['$gr'][0] : null;
+                            
+                            // Replace with our enhanced handler
+                            GAME.socket.off('gr');
+                            GAME.socket.on('gr', (data) => {
+                                // First call the original handler if it exists
+                                if (originalGrHandler) {
+                                    originalGrHandler.call(GAME.socket, data);
+                                }
+                                
+                                // Then handle our ball pickup logic
+                                this.handleGameNotification(data);
+                            });
+                        }
+                        
+                        // Set a timeout to continue even if no notification is received
+                        this.ball_search_timeout_id = setTimeout(() => {
+                            GAME.komunikat("BALL SEARCHER: Nie podnioslem kukli chyba bug.");
+                            this.ball_current_location_index++;
+                            this.processNextLocation();
+                        }, 5000);
+                    } else {
+                        GAME.komunikat("BALL SEARCHER: Jakis bug z id kukli.");
+                        this.ball_current_location_index++;
+                        this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                    }
+                } else {
+                    GAME.komunikat("BALL SEARCHER: Jakis bug z podnoszeniem kukli.");
+                    this.ball_current_location_index++;
+                    this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                }
+            }
+
+            handleGameNotification(data) {
+                if (!this.ball_search_active) return;
+                
+                // Check if this is a notification about ball pickup
+                if (data && typeof data.text === 'string') {
+                    const lowerText = data.text.toLowerCase();
+                    
+                    // Look for ball pickup success messages (adjust these patterns based on actual game messages)
+                    if (lowerText.includes('smocz') && lowerText.includes('kul') || 
+                        lowerText.includes('dragon') && lowerText.includes('ball') ||
+                        lowerText.includes('zdoby') && lowerText.includes('kul')) {
+                        
+                        // Clear the timeout that would have continued the search
+                        if (this.ball_search_timeout_id) {
+                            clearTimeout(this.ball_search_timeout_id);
+                            this.ball_search_timeout_id = null;
+                        }
+                        
+                        // Increment collected balls count
+                        this.ball_collected_count++;
+                        
+                        // Set cooldown for next pickup (61 seconds)
+                        this.ball_pickup_cooldown_active = true;
+                        this.ball_pickup_cooldown_end_time = this.getCurrentTimestamp() + 61000;
+                        
+                        
+                        // Continue to next location
+                        this.ball_current_location_index++;
+                        this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                    }
+                }
+            }
+            getCurrentTimestamp() {
+                return new Date().getTime();
+            }
+            // SZUKACZ KUKLI END
+
         }
         GAME.socket.on('pong', function(ms) {
             latency = ms;
