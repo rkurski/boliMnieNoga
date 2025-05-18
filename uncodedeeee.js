@@ -9,7 +9,7 @@ if (typeof GAME === 'undefined') {} else {
                 const csscode = ` #code_Panel { background: rgba(0,0,0,0.9); position: fixed; top: 450px; left: 80%; z-index: 9999; width: 180px; padding: 1px; border-radius: 5px; border-style: solid; border-width: 7px 8px 7px 7px; display:block; user-select: none; color: #333333; } #code_Panel .sekcja { position: absolute; top: -27px; left: -7px; background: rgba(0,0,0,0.9); filter: hue-rotate(196deg); background-size: 100% 100%; width: 180px; cursor: all-scroll; } #code_Panel .code_button {cursor:pointer;text-align:center; border-bottom:solid gray 1px; color: white;} `;
                 const cssres = ` #res_Panel { background: rgba(0,0,0,0.9); position: fixed; top: 450px; left: 65%; z-index: 9999; width: 150px; padding: 1px; border-radius: 5px; border-style: solid; border-width: 7px 8px 7px 7px; display:block; user-select: none; color: #333333; } #res_Panel .sekcja { position: absolute; top: -27px; left: -7px; background: rgba(0,0,0,0.9); filter: hue-rotate(196deg); background-size: 100% 100%; width: 150px; cursor: all-scroll; } #res_Panel .res_button {cursor:pointer;text-align:center; border-bottom:solid gray 1px; color: white;} #res_Panel ul {margin-left:-30px; color:white; margin:7px 0px 5px 0px; padding: 0px; text-align: center;} `;
                 const csslpvm = ` #lpvm_Panel { background: rgba(0,0,0,0.9); position: fixed; top: 650px; left: 80%; z-index: 9999; width: 150px; padding: 1px; border-radius: 5px; border-style: solid; border-width: 7px 8px 7px 7px; display:block; user-select: none; color: #333333; } #lpvm_Panel .sekcja { position: absolute; top: -27px; left: -7px; background: rgba(0,0,0,0.9); filter: hue-rotate(196deg); background-size: 100% 100%; width: 150px; cursor: all-scroll; } #lpvm_Panel .lpvm_button {cursor:pointer;text-align:center; border-bottom:solid gray 1px; color: white;} #lpvm_Panel .pvm_killed {cursor:pointer;text-align:center; border-LGtom:solid gray 1px;text-align:center; color:white;} #lpvm_Panel .gamee_input{text-align:center; border-bottom:solid gray 1px; color: white;} `;
-                const html = ` <div id="main_Panel"> <div class="sekcja panel_dragg">ALL FOR ONE</div> <div class='gh_button gh_resp'>PVM<b class='gh_status red'>Off</b></div> <div class='gh_button gh_pvp'>PVP<b class='gh_status red'>Off</b></div> <div class='gh_button gh_lpvm'>Listy<b class='gh_status red'>Off</b></div> <div class='gh_button gh_res'>Zbierajka<b class='gh_status red'>Off</b></div> <div class='gh_button gh_code'>Kody<b class='gh_status red'>Off</b></div> <div class='gh_button gh_low_lvls'>Ukryj niskie lvle<b class='gh_status red'>Off</b></div> </div> `;
+                const html = ` <div id="main_Panel"> <div class="sekcja panel_dragg">ALL FOR ONE</div> <div class='gh_button gh_resp'>PVM<b class='gh_status red'>Off</b></div> <div class='gh_button gh_pvp'>PVP<b class='gh_status red'>Off</b></div> <div class='gh_button gh_lpvm'>Listy<b class='gh_status red'>Off</b></div> <div class='gh_button gh_res'>Zbierajka<b class='gh_status red'>Off</b></div> <div class='gh_button gh_code'>Kody<b class='gh_status red'>Off</b></div> <div class='gh_button gh_low_lvls'>Ukryj niskie lvle<b class='gh_status red'>Off</b></div> <div class='gh_button gh_glebia'>GŁĘBIA<b class='gh_status red'>Off</b></div> </div> `;
                 const PVP_panel = ` <div id="pvp_Panel"> <div class="sekcja pvp_dragg">PVP</div> <div class='pvp_button pvp_pvp'>PVP<b class='pvp_status red'>Off</b></div> <div class='pvp_button pvp_Code'>Kody<b class='pvp_status green'>On</b></div> <div class="pvp_button pvpCODE_konto">Konto<b class="pvp_status red">Off</b></div> <div class='pvp_button pvp_rb_avoid'>Unikaj borny<b class='pvp_status red'>Off</b></div> <div class='pvp_button pvp_WI'>Wojny Imp<b class='pvp_status green'>On</b></div> <div class='pvp_button pvp_WK'>Wojny Klanowe<b class='pvp_status green'>On</b></div> <div class='pvp_button pvp_buff_imp'>Bufy IMP<b class='pvp_status red'>Off</b></div> <div class='pvp_button pvp_buff_clan'>Bufy KLAN<b class='pvp_status red'>Off</b></div> <div class='gamee_input'><input style='width:120px; margin-left:-2px; background:grey;text-align:center;font-size:16;' type='text' placeholder="Lista wojen" name='pvp_capt' value='' /></div> <div class='gameee_input'><input style='width:120px; margin-left:-2px; background:grey;text-align:center;font-size:16;' type='text' placeholder="Szybkość 10-100" name='speed_capt' value='50' /></div> </div> `;
                 const RESP_panel = ` <div id="resp_Panel"> <div class="sekcja resp_dragg">SPAWN MOBKóW</div> <div class="resp_button resp_resp">RESP<b class="resp_status red">Off</b></div> <div class="resp_button resp_code">Kody<b class="resp_status green">On</b></div> <div class="resp_button resp_konto">Konto<b class="resp_status red">Off</b></div> <div class="resp_button resp_sub">Subka<b class="resp_status green">On</b></div> <div class="resp_button resp_ost">Jaka<b class="resp_status green">Ost</b></div> <div class="resp_button resp_multi">Multiwalka<b class="resp_status green">On</b></div> <div class="resp_button resp_ssj">SSJ<b class="resp_status green">On</b></div> <div class="resp_button resp_buff_imp">Bufki IMP<b class="resp_status red">Off</b></div> <div class="resp_button resp_buff_clan">Bufki KLAN<b class="resp_status red">Off</b></div> <div class="resp_button resp_blue">BLUE<b class="resp_status red">Off</b></div> <div class="resp_button resp_green">GREEN<b class="resp_status red">Off</b></div> <div class="resp_button resp_purple">PURPLE<b class="resp_status red">Off</b></div> <div class="resp_button resp_yellow">YELLOW<b class="resp_status red">Off</b></div> <div class="resp_button resp_red">RED<b class="resp_status red">Off</b></div> <div class="resp_button resp_magic">Wyciąg<b class="resp_status red">Off</b></div> <div class="resp_button resp_bless">BŁOGO<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh1">SMOK<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh2">5% EXP<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh3">5% MOC<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh4">150K MAX<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh5">5% MOC<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh6">5% PSK<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh7">200% EXP<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh8">500 LVL<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh9">500% EXP<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh10">25% MOC<b class="resp_status red">Off</b></div> <div class="resp_button resp_on">Włącz All<b class="resp_status green">On</b></div> <div class="resp_button resp_off">Wyłącz All<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh11">100% Limit<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh14">100% Limit<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh12">200% Przyrost<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh13">300% Przyrost<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh15">5% kod<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh16">5 Min cd pvp <b class="resp_status red">Off</b></div> <div class="resp_button resp_bh17">15% szybsze zbieranie<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh18">15% więcej szansy na zebranie<b class="resp_status red">Off</b></div> </div> `;
                 const CODE_panel = ` <div id="code_Panel"> <div class="sekcja code_dragg">Kody</div> <div class="code_button code_code">KODY<b class="code_status red">Off</b></div> <div class="code_button code_acc">Konto<b class="code_status red">Off</b></div> <div class="code_button code_zast">Zastępstwa<b class="code_status red">Off</b></div> <div class="code_button code_bh1">Błogo 250% tren<b class="code_status red">Off</b></div> <div class="code_button code_bh2">Błogo 5% kod<b class="code_status red">Off</b></div> <label class='select_input'><select id='bot_what_to_train'><option value='1'>Siła</option><option value='2'>Szybkość</option><option value='3'>Wytrzymałość</option><option value='4'>Siła Woli</option><option value='5'>Energia Ki</option><option value='6'>Wtajemniczenie</option></select></label> <label class='select_input'><select id='bot_what_to_traintime'><option value='1'>1 godz.</option><option value='2'>2 godz.</option><option value='3'>3 godz.</option><option value='4'>4 godz.</option><option value='5'>5 godz.</option><option value='6'>6 godz.</option><option value='7'>7 godz.</option><option value='8'>8 godz.</option><option value='9'>9 godz.</option><option value='10'>10 godz.</option><option value='11'>11 godz.</option><option value='12'>12 godz.</option></label> </div> `;
@@ -106,6 +106,17 @@ if (typeof GAME === 'undefined') {} else {
                     } else {
                         $(".gh_low_lvls .gh_status").removeClass("green").addClass("red").html("Off");
                         LOWLVL.stop = true;
+                    }
+                });
+                // GŁĘBIA button click handler
+                $('#main_Panel .gh_glebia').click(() => {
+                    if ($(".gh_glebia .gh_status").hasClass("red")) {
+                        $(".gh_glebia .gh_status").removeClass("red").addClass("green").html("On");
+                        GLEBIA.stop = false;
+                        GLEBIA.start();
+                    } else {
+                        $(".gh_glebia .gh_status").removeClass("green").addClass("red").html("Off");
+                        GLEBIA.stop = true;
                     }
                 });
                 $('#pvp_Panel .pvp_pvp').click(() => {
@@ -1187,7 +1198,8 @@ if (typeof GAME === 'undefined') {} else {
                         } else {
                             window.setTimeout(PVP.start, PVP.czekajpvp / PVP.WSPP() / 2);
                         }
-                    } else {
+                    } 
+                    else {
                         window.setTimeout(PVP.start, PVP.czekajpvp / PVP.WSPP() / 2);
                     }
                 } else {
@@ -2776,6 +2788,385 @@ if (typeof GAME === 'undefined') {} else {
                         duration: CODE.what_to_traintime
                     });
                     window.setTimeout(CODE.start, CODE.wait);
+                }
+            };
+
+            const GLEBIA = {
+              stop: true,
+              caseNumber: 0,
+              wait: 10,
+              waitPvp: 50,
+              attackDelay: 260,
+              dogory: false,
+              loc: null,
+              move1: false,
+              move2: false,
+              move3: false,
+              mode: "attack",
+              attackChecks: 0,
+              
+              start: function() {
+                if (this.stop) return;
+                if (!GAME.is_loading) {
+                  this.action();
+                } else {
+                  setTimeout(() => this.start(), this.wait);
+                }
+              },
+              
+              action: function() {
+                const functions = [
+                  this.check_position_x.bind(this),
+                  this.check_position_y.bind(this),
+                  this.check_players.bind(this),
+                  this.check_players2.bind(this),
+                  this.kill_players.bind(this),
+                  this.check_glebia_location.bind(this),
+                  this.go.bind(this)
+                ];
+
+                functions[this.caseNumber]();
+                this.caseNumber = (this.caseNumber + 1) % functions.length;
+              },
+              
+              go: function() {
+                if (this.mode !== "move") return setTimeout(() => this.start(), this.wait);
+                this.attackChecks = 0;
+                kom_clear();
+
+                const x = GAME.char_data.x;
+                const y = GAME.char_data.y;
+
+                if (x === 11 && y === 11 && this.dogory && this.loc === 1) {
+                  this.cofanie2();
+                } else if (x === 15 && y === 15 && this.move3 && this.loc === 2) {
+                  this.cofanie();
+                } else if (x === 2 && y === 11 && this.loc === 1 && this.move1) {
+                  this.przejdz();
+                  setTimeout(() => {
+                    this.move(7);
+                  }, 1000);
+                } else if (x === 1 && y === 1 && this.loc === 2 && this.move3) {
+                  this.przejdz();
+                  setTimeout(() => {
+                    this.move(7);
+                  }, 1000);
+                } else if (((x === 7 && y === 7) && this.loc === 2 && this.move2) ||
+                           (x === 9 && y === 7 && this.loc === 2 && this.move2)) {
+                  this.move(3);
+                } else if (((x === 8 && y === 8) && this.loc === 2 && this.move2) ||
+                           (x === 10 && y === 8 && this.loc === 2 && this.move2)) {
+                  this.move(5);
+                } else if (x === 10 && y === 11 && this.loc === 1) {
+                  this.dogory = true;
+                  this.move(7);
+                } else if (x === 10 && y === 2 && this.loc === 1) {
+                  this.dogory = false;
+                  this.move(8);
+                } else if (x === 5 && y === 10 && this.loc === 1) {
+                  this.move1 = true;
+                  this.move(8);
+                } else if (x === 10 && y === 10 && this.loc === 1) {
+                  this.move1 = true;
+                  this.move(8);
+                } else if (x === 3 && y === 1 && this.loc === 2) {
+                  this.move1 = false;
+                  this.move(7);
+                } else if (x === 3 && y === 10 && this.loc === 1) {
+                  this.move(4);
+                } else if (x === 2 && y === 8 && this.loc === 1) {
+                  this.move(3);
+                } else if ((x === 11 && y === 11 && this.loc === 1) ||
+                           (x === 15 && y === 15 && this.loc === 2)) {
+                  this.move(2);
+                } else if (x === 5 && y === 7 && this.loc === 2) {
+                  this.move2 = true;
+                  this.move(7);
+                } else if (x === 13 && y === 7 && this.loc === 2) {
+                  this.move2 = false;
+                  this.move(7);
+                } else if (x === 12 && y === 15 && this.loc === 2) {
+                  this.move3 = true;
+                  this.move(7);
+                } else if (x === 5 && y === 11 && this.loc === 1) {
+                  this.move3 = false;
+                  this.move(7);
+                } else if (x === 10 && y === 15 && this.loc === 2) {
+                  this.move3 = true;
+                  this.move(7);
+                } else if (x === 7 && y === 11 && this.loc === 1) {
+                  this.move3 = false;
+                  this.move(7);
+                } else if (x === 7 && y === 7 && this.loc === 2) {
+                  this.move(1);
+                } else if ((x < 11 && y % 2 !== 0 && this.loc === 1) ||
+                           (x < 15 && y % 2 !== 0 && this.loc === 2)) {
+                  this.move(7);
+                } else if ((x > 2 && y % 2 === 0 && this.loc === 1) ||
+                           (x > 1 && y % 2 === 0 && this.loc === 2)) {
+                  this.move(8);
+                } else if ((x === 11 && this.loc === 1) ||
+                           (x === 2 && this.loc === 1) ||
+                           (x === 3 && y === 9 && this.loc === 1) ||
+                           (x === 1 && this.loc === 2) ||
+                           (x === 15 && this.loc === 2) ||
+                           (x === 7 && y === 7 && this.loc === 2)) {
+                  this.move(1);
+                } else {
+                  this.start();
+                }
+              },
+              
+              cofanie: function() {
+                const y = GAME.char_data.y;
+                if (y <= 1) {
+                  setTimeout(() => this.start(), this.wait);
+                } else {
+                  GAME.emitOrder({
+                    a: 4,
+                    dir: 6,
+                    vo: GAME.map_options.vo
+                  });
+                  setTimeout(() => {
+                    this.cofanie();
+                  }, 50);
+                }
+              },
+              
+              cofanie2: function() {
+                const y = GAME.char_data.y;
+                if (y <= 2) {
+                  setTimeout(() => this.start(), this.wait);
+                } else {
+                  GAME.emitOrder({
+                    a: 4,
+                    dir: 2,
+                    vo: GAME.map_options.vo
+                  });
+                  this.move1 = true;
+                  setTimeout(() => {
+                    this.cofanie2();
+                  }, 50);
+                }
+              },
+              
+              move: function(direction) {
+                const valid = [2, 1, 8, 7, 5, 4, 3];
+                if (!valid.includes(direction)) return;
+                GAME.emitOrder({ a: 4, dir: direction, vo: GAME.map_options.vo });
+                const poll = setInterval(() => {
+                  if (!GAME.is_loading) {
+                    clearInterval(poll);
+                    this.attackChecks = 0;
+                    kom_clear();
+                    this.mode = 'attack';
+                    this.start();
+                  }
+                }, this.wait);
+              },
+              
+              przejdz: function() {
+                GAME.emitOrder({ a: 6, tpid: 0 });
+                const poll = setInterval(() => {
+                  if (!GAME.is_loading) {
+                    clearInterval(poll);
+                    this.attackChecks = 0;
+                    kom_clear();
+                    this.start();
+                  }
+                }, this.wait);
+                  this.move3 = false
+                  this.move1 = false
+              },
+              
+              check_position_x: function() {
+                const x = GAME.char_data.x;
+                setTimeout(() => this.start(), this.wait);
+              },
+              
+              check_position_y: function() {
+                const y = GAME.char_data.y;
+                setTimeout(() => this.start(), this.wait);
+              },
+              
+              check_players: function() {
+                const playerList = document.getElementById("player_list_con");
+                if (!playerList || playerList.childElementCount === 0) {
+                  return setTimeout(() => this.start(), this.wait);
+                }
+                
+                if (LOWLVL.stop == true) {
+                  if (playerList.children[0].children[1].childElementCount === 3) {
+                    const tabb2 = playerList.children[0].children[1].children[0].textContent.split(":");
+                    if (parseInt(tabb2[1]) <= 1 && GAME.char_data.y === 2) {
+                      return setTimeout(() => this.check_players(), 150);
+                    }
+                  }
+                }
+
+                setTimeout(() => this.start(), this.wait);
+              },
+              
+              check_players2: function() {
+                const playerList = document.getElementById("player_list_con");
+                if (!playerList || playerList.childElementCount === 0) {
+                  return setTimeout(() => this.start(), this.waitPvp);
+                }
+                if (LOWLVL.stop == true) {
+                  const tabb = playerList.children[0].children[1].children[0].textContent.split(":");
+                  if (parseInt(tabb[2]) <= 30 && parseInt(tabb[1]) <= 0) {
+                    return setTimeout(() => this.check_players2(), 150);
+                  }
+                }
+                setTimeout(() => this.start(), this.waitPvp);
+              },
+              
+              isEnemyAttackable: function(player) {
+                const cdElem = player.querySelector('.timer');
+                if (!cdElem) {
+                  return true; // Brak timera = gracz gotowy
+                }
+                const parts = cdElem.textContent.split(':');
+                if (parts.length === 3) {
+                  const seconds = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+                  return seconds <= 5;
+                }
+                return true; // Nieprawidłowy format timera = zakładamy, że gotowy
+              },
+              
+              getAttackablePlayers: function(players) {
+                const attackable = players.filter(player => {
+                  const attackButton = player.querySelector('button[data-quick="1"]');
+                  const targetId = attackButton?.getAttribute('data-char_id');
+                  const isAttackable = targetId && this.isEnemyAttackable(player);
+                  return isAttackable;
+                });
+                return attackable;
+              },
+              
+              attackNext: function(players, index, callback) {
+                if (index >= players.length) {
+                  callback();
+                  return;
+                }
+
+                const player = players[index];
+                const attackButton = player.querySelector('button[data-quick="1"]');
+                const targetId = attackButton?.getAttribute('data-char_id');
+
+                if (targetId && this.isEnemyAttackable(player)) {
+                  GAME.emitOrder({
+                    a: 24,
+                    char_id: targetId,
+                    quick: 1
+                  });
+                }
+
+                setTimeout(() => this.attackNext(players, index + 1, callback), this.attackDelay);
+              },
+              
+              loadAllPlayers: function(callback) {
+                const playerList = document.getElementById('player_list_con');
+                if (!playerList || playerList.children.length === 0) {
+                  return setTimeout(callback, 0);
+                }
+
+                const loadMore = playerList.querySelector('[data-option="load_more_players"]');
+                if (loadMore) {
+                  loadMore.click();
+                  setTimeout(() => this.loadAllPlayers(callback), 800);
+                } else {
+                  setTimeout(callback, 0);
+                }
+              },
+              
+              kill_players: function() {
+                this.loadAllPlayers(() => {
+                  const list = document.getElementById('player_list_con');
+                  if (!list) {
+                    return setTimeout(() => this.start(), this.wait);
+                  }
+
+                  setTimeout(() => {
+                    // Usuwanie graczy z timerami > 5 sekund lub bez data-quick="1" z DOM
+                    Array.from(list.children).forEach(player => {
+                      const cdElem = player.querySelector('.timer');
+                      const attackButton = player.querySelector('button[data-quick="1"]');
+                      let remove = false;
+                      if (cdElem) {
+                        const parts = cdElem.textContent.split(':');
+                        if (parts.length === 3) {
+                          const seconds = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+                          if (seconds > 5) remove = true;
+                        }
+                      }
+                      if (!attackButton) remove = true;
+                      if (remove) player.remove();
+                    });
+
+                    const attackablePlayers = this.getAttackablePlayers(Array.from(list.children));
+
+                    if (attackablePlayers.length === 0) {
+                      this.attackChecks++;
+                      if (this.attackChecks >= 3) {
+                        this.attackChecks = 0;
+                        this.mode = 'move';
+                        setTimeout(() => this.start(), this.wait);
+                      } else {
+                        this.loadAllPlayers(() => {
+                          setTimeout(() => this.kill_players(), this.waitPvp);
+                        });
+                      }
+                      return;
+                    }
+
+                    this.attackNext(attackablePlayers, 0, () => {
+                      this.attackChecks++;
+                      this.loadAllPlayers(() => {
+                        setTimeout(() => {
+                          Array.from(list.children).forEach(player => {
+                            const cdElem = player.querySelector('.timer');
+                            const attackButton = player.querySelector('button[data-quick="1"]');
+                            let remove = false;
+                            if (cdElem) {
+                              const parts = cdElem.textContent.split(':');
+                              if (parts.length === 3) {
+                                const seconds = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+                                if (seconds > 5) remove = true;
+                              }
+                            }
+                            if (!attackButton) remove = true;
+                            if (remove) player.remove();
+                          });
+
+                          const stillAttackable = this.getAttackablePlayers(Array.from(list.children)).length > 0;
+                          if (stillAttackable && this.attackChecks < 3) {
+                            setTimeout(() => this.kill_players(), this.waitPvp);
+                          } else {
+                            this.attackChecks = 0;
+                            this.mode = 'move';
+                            setTimeout(() => this.start(), this.wait);
+                          }
+                        }, this.waitPvp);
+                      });
+                    });
+                  }, this.wait);
+                });
+              },
+              
+              check_glebia_location: function() {
+                const locationMap = {
+                  "Głębia": 1,
+                  "Głębia Rajskiej Sali": 2
+                };
+
+                let currentLoc = locationMap[GAME.current_loc.name] || 7;
+                if (this.loc !== null && this.loc !== currentLoc) {
+                  this.attackChecks = 0;
+                  kom_clear();
+                }
+                this.loc = currentLoc;
+                setTimeout(() => this.start(), this.wait);
                 }
             };
             createPanel();
