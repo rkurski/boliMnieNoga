@@ -2795,18 +2795,18 @@ if (typeof GAME === 'undefined') {} else {
               stop: true,
               caseNumber: 0,
               wait: 10,
-              waitPvp: 50,
+              waitPvp: 200,
               attackDelay: 260,
               dogory: false,
               loc: null,
               move1: false,
               move2: false,
               move3: false,
-              mode: "attack",
               attackChecks: 0,
               
               start: function() {
                 if (this.stop) return;
+
                 if (!GAME.is_loading) {
                   this.action();
                 } else {
@@ -2830,9 +2830,7 @@ if (typeof GAME === 'undefined') {} else {
               },
               
               go: function() {
-                if (this.mode !== "move") return setTimeout(() => this.start(), this.wait);
                 this.attackChecks = 0;
-                kom_clear();
 
                 const x = GAME.char_data.x;
                 const y = GAME.char_data.y;
@@ -2843,14 +2841,10 @@ if (typeof GAME === 'undefined') {} else {
                   this.cofanie();
                 } else if (x === 2 && y === 11 && this.loc === 1 && this.move1) {
                   this.przejdz();
-                  setTimeout(() => {
-                    this.move(7);
-                  }, 1000);
+                  setTimeout(() => { this.move(7); }, 1000);
                 } else if (x === 1 && y === 1 && this.loc === 2 && this.move3) {
                   this.przejdz();
-                  setTimeout(() => {
-                    this.move(7);
-                  }, 1000);
+                  setTimeout(() => { this.move(7); }, 1000);
                 } else if (((x === 7 && y === 7) && this.loc === 2 && this.move2) ||
                            (x === 9 && y === 7 && this.loc === 2 && this.move2)) {
                   this.move(3);
@@ -2912,8 +2906,6 @@ if (typeof GAME === 'undefined') {} else {
                            (x === 15 && this.loc === 2) ||
                            (x === 7 && y === 7 && this.loc === 2)) {
                   this.move(1);
-                } else {
-                  this.start();
                 }
               },
               
@@ -2927,9 +2919,7 @@ if (typeof GAME === 'undefined') {} else {
                     dir: 6,
                     vo: GAME.map_options.vo
                   });
-                  setTimeout(() => {
-                    this.cofanie();
-                  }, 50);
+                  setTimeout(() => { this.cofanie(); }, 50);
                 }
               },
               
@@ -2944,9 +2934,7 @@ if (typeof GAME === 'undefined') {} else {
                     vo: GAME.map_options.vo
                   });
                   this.move1 = true;
-                  setTimeout(() => {
-                    this.cofanie2();
-                  }, 50);
+                  setTimeout(() => { this.cofanie2(); }, 50);
                 }
               },
               
@@ -2954,27 +2942,12 @@ if (typeof GAME === 'undefined') {} else {
                 const valid = [2, 1, 8, 7, 5, 4, 3];
                 if (!valid.includes(direction)) return;
                 GAME.emitOrder({ a: 4, dir: direction, vo: GAME.map_options.vo });
-                const poll = setInterval(() => {
-                  if (!GAME.is_loading) {
-                    clearInterval(poll);
-                    this.attackChecks = 0;
-                    kom_clear();
-                    this.mode = 'attack';
-                    this.start();
-                  }
-                }, this.wait);
+                setTimeout(() => this.start(), this.wait);
               },
               
               przejdz: function() {
                 GAME.emitOrder({ a: 6, tpid: 0 });
-                const poll = setInterval(() => {
-                  if (!GAME.is_loading) {
-                    clearInterval(poll);
-                    this.attackChecks = 0;
-                    kom_clear();
-                    this.start();
-                  }
-                }, this.wait);
+                setTimeout(() => this.stop, 1000);
                   this.move3 = false
                   this.move1 = false
               },
@@ -3110,7 +3083,6 @@ if (typeof GAME === 'undefined') {} else {
                       this.attackChecks++;
                       if (this.attackChecks >= 3) {
                         this.attackChecks = 0;
-                        this.mode = 'move';
                         setTimeout(() => this.start(), this.wait);
                       } else {
                         this.loadAllPlayers(() => {
@@ -3144,7 +3116,6 @@ if (typeof GAME === 'undefined') {} else {
                             setTimeout(() => this.kill_players(), this.waitPvp);
                           } else {
                             this.attackChecks = 0;
-                            this.mode = 'move';
                             setTimeout(() => this.start(), this.wait);
                           }
                         }, this.waitPvp);
@@ -3163,7 +3134,6 @@ if (typeof GAME === 'undefined') {} else {
                 let currentLoc = locationMap[GAME.current_loc.name] || 7;
                 if (this.loc !== null && this.loc !== currentLoc) {
                   this.attackChecks = 0;
-                  kom_clear();
                 }
                 this.loc = currentLoc;
                 setTimeout(() => this.start(), this.wait);
