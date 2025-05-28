@@ -790,10 +790,13 @@ if (typeof GAME === 'undefined') { } else {
                 let levelsGained = currentLevel - GAME.startLevel;
                 let levelsPerHour = levelsGained / ((currentTime - GAME.startTime) / 1000 / 60 / 60);
                 let lvlh = levelsPerHour.toFixed(2);
-                if ($(`#mdbp_${GAME.char_data.reborn}`).find('.timer').length) {
-                    sk_status = $(`#mdbp_${GAME.char_data.reborn}`).find('.timer').text();
-                } else {
+                let dbText = $(`#mdbp_${GAME.char_data.reborn}`).find('.db_owners').text().trim();
+                if (dbText.indexOf("Smocze kule zostaną zresestowane za") !== -1) {
                     sk_status = "AKTYWNE";
+                } else {
+                    sk_status = $(`#mdbp_${GAME.char_data.reborn}`).find('.timer').length 
+                        ? $(`#mdbp_${GAME.char_data.reborn}`).find('.timer').text() 
+                        : "AKTYWNE";
                 }
                 let train_upgr = $("#train_uptime").find('.timer').text();
                 if (train_upgr.length == 0 || train_upgr == "00:00:00") {
