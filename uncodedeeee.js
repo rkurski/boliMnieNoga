@@ -1636,7 +1636,7 @@ if (typeof GAME === 'undefined') {} else {
                         am: 1
                     });
                     return true;
-                } else if (RESP.checkOST && $('#doubler_status').text() <= '00:00:03') {
+                } else if (RESP.checkOST && $('#doubler_status').text() <= '00:00:05') {
                     return true;
                 } else if ((!RESP.checkOST && RESP.checkOST_timer <= GAME.getTime()) || (RESP.jaka == 1 && RESP.checkOST_timer <= GAME.getTime())) {
                     RESP.checkOST_timer = GAME.getTime() + 60;
@@ -1648,8 +1648,10 @@ if (typeof GAME === 'undefined') {} else {
                         tech_id: GAME.quick_opts.ssj[0]
                     });
                     return true;
-                } else if (RESP.checkSSJ && $('#ssj_status').text() <= '00:00:03' && GAME.quick_opts.ssj) {
-                    return true;
+                } else if (RESP.checkSSJ && $('#ssj_status').text() <= '00:00:05' && GAME.quick_opts.ssj) {
+                    setTimeout(() => {
+                          return true;
+                      }, 6000);
                 } else if ($('#ssj_status').text() == "--:--:--" && GAME.quick_opts.ssj) {
                     GAME.socket.emit(`ga`, {
                         a: 18,
