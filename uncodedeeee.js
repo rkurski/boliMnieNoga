@@ -10,13 +10,15 @@ if (typeof GAME === 'undefined') {} else {
                 const cssres = ` #res_Panel { background: rgba(0,0,0,0.9); position: fixed; top: 450px; left: 65%; z-index: 9999; width: 150px; padding: 1px; border-radius: 5px; border-style: solid; border-width: 7px 8px 7px 7px; display:block; user-select: none; color: #333333; } #res_Panel .sekcja { position: absolute; top: -27px; left: -7px; background: rgba(0,0,0,0.9); filter: hue-rotate(196deg); background-size: 100% 100%; width: 150px; cursor: all-scroll; } #res_Panel .res_button {cursor:pointer;text-align:center; border-bottom:solid gray 1px; color: white;} #res_Panel ul {margin-left:-30px; color:white; margin:7px 0px 5px 0px; padding: 0px; text-align: center;} `;
                 const csslpvm = ` #lpvm_Panel { background: rgba(0,0,0,0.9); position: fixed; top: 650px; left: 80%; z-index: 9999; width: 150px; padding: 1px; border-radius: 5px; border-style: solid; border-width: 7px 8px 7px 7px; display:block; user-select: none; color: #333333; } #lpvm_Panel .sekcja { position: absolute; top: -27px; left: -7px; background: rgba(0,0,0,0.9); filter: hue-rotate(196deg); background-size: 100% 100%; width: 150px; cursor: all-scroll; } #lpvm_Panel .lpvm_button {cursor:pointer;text-align:center; border-bottom:solid gray 1px; color: white;} #lpvm_Panel .pvm_killed {cursor:pointer;text-align:center; border-LGtom:solid gray 1px;text-align:center; color:white;} #lpvm_Panel .gamee_input{text-align:center; border-bottom:solid gray 1px; color: white;} `;
                 const cssglebia = ` #glebia_Panel { background: rgba(0,0,0,0.9); position: fixed; top: 450px; left: 80%; z-index: 9999; width: 150px; padding: 1px; border-radius: 5px; border-style: solid; border-width: 7px 8px 7px 7px; display:block; user-select: none; color: #333333; } #glebia_Panel .sekcja { position: absolute; top: -27px; left: -7px; background: rgba(0,0,0,0.9); filter: hue-rotate(196deg); background-size: 100% 100%; width: 150px; cursor: all-scroll; } #glebia_Panel .glebia_button {cursor:pointer;text-align:center; border-bottom:solid gray 1px; color: white;} `;
-                const html = ` <div id="main_Panel"> <div class="sekcja panel_dragg">ALL FOR ONE</div> <div class='gh_button gh_resp'>PVM<b class='gh_status red'>Off</b></div> <div class='gh_button gh_pvp'>PVP<b class='gh_status red'>Off</b></div> <div class='gh_button gh_lpvm'>Listy<b class='gh_status red'>Off</b></div> <div class='gh_button gh_res'>Zbierajka<b class='gh_status red'>Off</b></div> <div class='gh_button gh_code'>Kody<b class='gh_status red'>Off</b></div> <div class='gh_button gh_low_lvls'>Ukryj niskie lvle<b class='gh_status red'>Off</b></div> <div class='gh_button gh_glebia'>Głębia<b class='gh_status red'>Off</b></div> </div> `;
+                const cssdq = ` #daily_quests_Panel { background: rgba(0,0,0,0.9); position: fixed; top: 250px; left: 65%; z-index: 9999; width: 200px; padding: 1px; border-radius: 5px; border-style: solid; border-width: 7px 8px 7px 7px; display:block; user-select: none; color: #333333; max-height: 400px; overflow-y: auto; } #daily_quests_Panel .sekcja { position: absolute; top: -27px; left: -7px; background: rgba(0,0,0,0.9); filter: hue-rotate(196deg); background-size: 100% 100%; width: 200px; cursor: all-scroll; } #daily_quests_Panel .dq_button {cursor:pointer;text-align:center; border-bottom:solid gray 1px; color: white;} #daily_quests_Panel .dq_location {display: flex; justify-content: space-between; align-items: center; padding: 5px; border-bottom: solid gray 1px; color: white;} #daily_quests_Panel .dq_location_name {flex-grow: 1; text-align: left; padding-left: 5px;} #daily_quests_Panel .dq_location_toggle {cursor: pointer; width: 20px; height: 20px; margin-right: 5px;} #daily_quests_Panel .dq_location_status {width: 20px; height: 20px; margin-right: 5px;} #daily_quests_Panel .dq_progress {text-align: center; padding: 5px; color: white; font-weight: bold;} #daily_quests_Panel .dq_status {text-align: center; padding: 5px; color: #ffcc00; font-style: italic;} #daily_quests_Panel .completed {text-decoration: line-through; opacity: 0.7;} #daily_quests_Panel .active {background-color: rgba(0, 255, 0, 0.2);} `;
+                const html = ` <div id="main_Panel"> <div class="sekcja panel_dragg">ALL FOR ONE</div> <div class='gh_button gh_resp'>PVM<b class='gh_status red'>Off</b></div> <div class='gh_button gh_pvp'>PVP<b class='gh_status red'>Off</b></div> <div class='gh_button gh_lpvm'>Listy<b class='gh_status red'>Off</b></div> <div class='gh_button gh_daily_quests'>Daily Quests<b class='gh_status red'>Off</b></div> <div class='gh_button gh_res'>Zbierajka<b class='gh_status red'>Off</b></div> <div class='gh_button gh_code'>Kody<b class='gh_status red'>Off</b></div> <div class='gh_button gh_low_lvls'>Ukryj niskie lvle<b class='gh_status red'>Off</b></div> <div class='gh_button gh_glebia'>Głębia<b class='gh_status red'>Off</b></div> </div> `;
                 const PVP_panel = ` <div id="pvp_Panel"> <div class="sekcja pvp_dragg">PVP</div> <div class='pvp_button pvp_pvp'>PVP<b class='pvp_status red'>Off</b></div> <div class='pvp_button pvp_Code'>Kody<b class='pvp_status green'>On</b></div> <div class="pvp_button pvpCODE_konto">Konto<b class="pvp_status red">Off</b></div> <div class='pvp_button pvp_rb_avoid'>Unikaj borny<b class='pvp_status red'>Off</b></div> <div class='pvp_button pvp_WI'>Wojny Imp<b class='pvp_status green'>On</b></div> <div class='pvp_button pvp_WK'>Wojny Klanowe<b class='pvp_status green'>On</b></div> <div class='pvp_button pvp_buff_imp'>Bufy IMP<b class='pvp_status red'>Off</b></div> <div class='pvp_button pvp_buff_clan'>Bufy KLAN<b class='pvp_status red'>Off</b></div> <div class='gamee_input'><input style='width:120px; margin-left:-2px; background:grey;text-align:center;font-size:16;' type='text' placeholder="Lista wojen" name='pvp_capt' value='' /></div> <div class='gameee_input'><input style='width:120px; margin-left:-2px; background:grey;text-align:center;font-size:16;' type='text' placeholder="Szybkość 10-100" name='speed_capt' value='50' /></div> </div> `;
                 const RESP_panel = ` <div id="resp_Panel"> <div class="sekcja resp_dragg">SPAWN MOBKóW</div> <div class="resp_button resp_resp">RESP<b class="resp_status red">Off</b></div> <div class="resp_button resp_code">Kody<b class="resp_status green">On</b></div> <div class="resp_button resp_konto">Konto<b class="resp_status red">Off</b></div> <div class="resp_button resp_sub">Subka<b class="resp_status green">On</b></div> <div class="resp_button resp_ost">Jaka<b class="resp_status green">Ost</b></div> <div class="resp_button resp_multi">Multiwalka<b class="resp_status green">On</b></div> <div class="resp_button resp_ssj">SSJ<b class="resp_status green">On</b></div> <div class="resp_button resp_buff_imp">Bufki IMP<b class="resp_status red">Off</b></div> <div class="resp_button resp_buff_clan">Bufki KLAN<b class="resp_status red">Off</b></div> <div class="resp_button resp_blue">BLUE<b class="resp_status red">Off</b></div> <div class="resp_button resp_green">GREEN<b class="resp_status red">Off</b></div> <div class="resp_button resp_purple">PURPLE<b class="resp_status red">Off</b></div> <div class="resp_button resp_yellow">YELLOW<b class="resp_status red">Off</b></div> <div class="resp_button resp_red">RED<b class="resp_status red">Off</b></div> <div class="resp_button resp_magic">Wyciąg<b class="resp_status red">Off</b></div> <div class="resp_button resp_bless">BŁOGO<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh1">SMOK<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh2">5% EXP<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh3">5% MOC<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh4">150K MAX<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh5">5% MOC<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh6">5% PSK<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh7">200% EXP<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh8">500 LVL<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh9">500% EXP<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh10">25% MOC<b class="resp_status red">Off</b></div> <div class="resp_button resp_on">Włącz All<b class="resp_status green">On</b></div> <div class="resp_button resp_off">Wyłącz All<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh11">100% Limit<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh14">100% Limit<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh12">200% Przyrost<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh13">300% Przyrost<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh15">5% kod<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh16">5 Min cd pvp <b class="resp_status red">Off</b></div> <div class="resp_button resp_bh17">15% szybsze zbieranie<b class="resp_status red">Off</b></div> <div class="resp_button resp_bh18">15% więcej szansy na zebranie<b class="resp_status red">Off</b></div> </div> `;
                 const CODE_panel = ` <div id="code_Panel"> <div class="sekcja code_dragg">Kody</div> <div class="code_button code_code">KODY<b class="code_status red">Off</b></div> <div class="code_button code_acc">Konto<b class="code_status red">Off</b></div> <div class="code_button code_zast">Zastępstwa<b class="code_status red">Off</b></div> <div class="code_button code_bh1">Błogo 250% tren<b class="code_status red">Off</b></div> <div class="code_button code_bh2">Błogo 5% kod<b class="code_status red">Off</b></div> <label class='select_input'><select id='bot_what_to_train'><option value='1'>Siła</option><option value='2'>Szybkość</option><option value='3'>Wytrzymałość</option><option value='4'>Siła Woli</option><option value='5'>Energia Ki</option><option value='6'>Wtajemniczenie</option></select></label> <label class='select_input'><select id='bot_what_to_traintime'><option value='1'>1 godz.</option><option value='2'>2 godz.</option><option value='3'>3 godz.</option><option value='4'>4 godz.</option><option value='5'>5 godz.</option><option value='6'>6 godz.</option><option value='7'>7 godz.</option><option value='8'>8 godz.</option><option value='9'>9 godz.</option><option value='10'>10 godz.</option><option value='11'>11 godz.</option><option value='12'>12 godz.</option></label> </div> `;
                 const RES_panel = ` <div id="res_Panel"> <div class="sekcja res_dragg">SUROWCE</div> <div class="res_button res_res">ZBIERAJ<b class="res_status red">Off</b></div> <div class="bt_cool" style="text-align:center; color:white;"></div> <ul></ul> </div> `;
                 const LPVM_panel = ` <div id="lpvm_Panel"> <div class="sekcja lpvm_dragg">LISTY GOŃCZE</div> <div class='pvm_killed'>Wykonane listy: <b>0</b></div> <div class="lpvm_button lpvm_lpvm">START<b class="lpvm_status red">Off</b></div> <div class="lpvm_button lpvm_g">G-Born<b class="lpvm_status red">Off</b></div> <div class="lpvm_button lpvm_u">U-Born<b class="lpvm_status red">Off</b></div> <div class="lpvm_button lpvm_s">S-Born<b class="lpvm_status red">Off</b></div> <div class="lpvm_button lpvm_h">H-Born<b class="lpvm_status red">Off</b></div> <div class="lpvm_button lpvm_m">M-Born<b class="lpvm_status red">Off</b></div> <div class="lpvm_button lpvm_limit">Limit<b class="lpvm_status red">Off</b></div> <div class='gamee_input'><input style='width:120px; margin-left:-2px; background:grey;text-align:center;font-size:16;' type='text' placeholder="Enter text" name='lpvm_capt' value='60' /></div> </div> `;
                 const GLEBIA_panel = ` <div id="glebia_Panel"> <div class="sekcja glebia_dragg">GŁĘBIA</div> <div class='glebia_button glebia_toggle'>Start<b class='glebia_status red'>Off</b></div> <div class='glebia_button glebia_code'>Kody<b class='glebia_status red'>Off</b></div> <div class='glebia_button glebia_skip_empire'>Ukryj imperium<b class='glebia_status red'>Off</b></div> </div> `;
+                const DAILY_QUESTS_HTML = ` <div id="daily_quests_Panel"> <div class="sekcja dq_dragg">DAILY QUESTS</div> <div class="dq_button dq_start_stop">START<b class="dq_status red">Off</b></div> <div class="dq_button dq_reset">RESET PROGRESS</div> <div class="dq_progress">Progress: <span id="dq_progress_count">0/0</span></div> <div class="dq_status" id="dq_status_message">Ready to start</div> <div id="dq_locations_list"></div> </div> `;
                 $("body").append(`<style>${css}</style>${html}`);
                 $("body").append(`<style>${csspvp}</style>${PVP_panel}`);
                 $("body").append(`<style>${cssresp}</style>${RESP_panel}`);
@@ -24,6 +26,11 @@ if (typeof GAME === 'undefined') {} else {
                 $("body").append(`<style>${cssres}</style>${RES_panel}`);
                 $("body").append(`<style>${csslpvm}</style>${LPVM_panel}`);
                 $("body").append(`<style>${cssglebia}</style>${GLEBIA_panel}`);
+                $("body").append(`<style>${cssdq}</style>${DAILY_QUESTS_HTML}`);
+                $("#daily_quests_Panel").hide();
+                $("#daily_quests_Panel").draggable({
+                  handle: ".dq_dragg"
+                });
                 $("#pvp_Panel").hide();
                 $("#resp_Panel").hide();
                 $("#code_Panel").hide();
@@ -127,7 +134,17 @@ if (typeof GAME === 'undefined') {} else {
                         GLEBIA.stop = true;
                     }
                 });
-                
+                $('#main_Panel .gh_daily_quests').click(() => {
+                  if ($(".gh_daily_quests .gh_status").hasClass("red")) {
+                    $(".gh_daily_quests .gh_status").removeClass("red").addClass("green").html("On");
+                    $("#daily_quests_Panel").show();
+                  } else {
+                    $(".gh_daily_quests .gh_status").removeClass("green").addClass("red").html("Off");
+                    $("#daily_quests_Panel").hide();
+                    DAILY_QUESTS.stop();
+                    $(".dq_start_stop .dq_status").removeClass("green").addClass("red").html("Off");
+                  }
+                });
                 // GŁĘBIA toggle button in submenu
                 $('#glebia_Panel .glebia_toggle').click(() => {
                     if (GLEBIA.stop) {
@@ -976,7 +993,79 @@ if (typeof GAME === 'undefined') {} else {
                     PVP.war = $(e.target).val();
                     PVP.save_clan_list();
                 });
-            }(function() {
+                $('#daily_quests_Panel .dq_start_stop').click(() => {
+                  if ($(".dq_start_stop .dq_status").hasClass("red")) {
+                    $(".dq_start_stop .dq_status").removeClass("red").addClass("green").html("On");
+                    DAILY_QUESTS.start();
+                  } else {
+                    $(".dq_start_stop .dq_status").removeClass("green").addClass("red").html("Off");
+                    DAILY_QUESTS.stop();
+                  }
+                });
+
+                $('#daily_quests_Panel .dq_reset').click(() => {
+                  if (confirm("Are you sure you want to reset all quest progress?")) {
+                    DAILY_QUESTS.resetAllProgress();
+                    updateDailyQuestsUI();
+                  }
+                });
+            
+            function updateDailyQuestsUI() {
+              updateQuestsList();
+              updateProgressCounter();
+            }
+
+            function updateQuestsList() {
+              const $list = $('#dq_locations_list');
+              $list.empty();
+              
+              DAILY_QUESTS.locations.forEach((location, index) => {
+                const $location = $('<div class="dq_location"></div>');
+                $location.data('index', index);
+                
+                // Add toggle checkbox
+                const $toggle = $('<input type="checkbox" class="dq_location_toggle">');
+                $toggle.prop('checked', !location.disabled);
+                $location.append($toggle);
+                
+                // Add location name
+                const $name = $('<div class="dq_location_name"></div>').text(location.name);
+                if (location.completed) {
+                  $name.addClass('completed');
+                }
+                if (DAILY_QUESTS.runtime.currentLocationIndex === index && DAILY_QUESTS.settings.active) {
+                  $location.addClass('active');
+                }
+                $location.append($name);
+                
+                // Add status indicator
+                const $status = $('<div class="dq_location_status"></div>');
+                if (location.completed) {
+                  $status.text('✓');
+                  $status.css('color', 'green');
+                } else if (location.disabled) {
+                  $status.text('✗');
+                  $status.css('color', 'red');
+                } else {
+                  $status.text('○');
+                  $status.css('color', 'white');
+                }
+                $location.append($status);
+                
+                $list.append($location);
+              });
+            }
+
+            function updateProgressCounter() {
+              const total = DAILY_QUESTS.locations.length;
+              const completed = DAILY_QUESTS.locations.filter(loc => loc.completed).length;
+              $('#dq_progress_count').text(completed + '/' + total);
+            }
+
+            function setStatusMessage(message) {
+              $('#dq_status_message').text(message);
+            }
+              }(function() {
                 let a;
 
                 function f() {
@@ -3247,6 +3336,572 @@ if (typeof GAME === 'undefined') {} else {
                 return false;
               }
             };
+
+            // const GLEBIA = {
+            //   stop: false,
+            //   caseNumber: 0,
+            //   wait: 10,
+            //   waitPvp: 80,
+            //   attackDelay: 260,
+            //   dogory: false,
+            //   loc: null,
+            //   move1: false,
+            //   move2: false,
+            //   move3: false,
+            //   attackChecks: 0,
+            //   code: false,
+            //   skipEmpire: false,
+            //   timeouts: [],
+            //   intervals: [],
+            //   lastX: null,
+            //   lastY: null,
+            //   lastLoc: null,
+              
+            //   // Create a safe setTimeout that tracks the timeout ID
+            //   safeTimeout: function(callback, delay) {
+            //     if (this.stop) return null;
+            //     const timeoutId = setTimeout(() => {
+            //       // Remove this timeout from the tracking array
+            //       this.timeouts = this.timeouts.filter(id => id !== timeoutId);
+            //       // Only execute callback if not stopped
+            //       if (!this.stop) {
+            //         callback();
+            //       }
+            //     }, delay);
+                
+            //     // Track this timeout
+            //     this.timeouts.push(timeoutId);
+            //     return timeoutId;
+            //   },
+              
+            //   // Create a safe setInterval that tracks the interval ID
+            //   safeInterval: function(callback, delay) {
+            //     if (this.stop) return null;
+            //     const intervalId = setInterval(() => {
+            //       // Only execute callback if not stopped
+            //       if (!this.stop) {
+            //         callback();
+            //       } else {
+            //         // Clear the interval if stopped
+            //         clearInterval(intervalId);
+            //         this.intervals = this.intervals.filter(id => id !== intervalId);
+            //       }
+            //     }, delay);
+                
+            //     // Track this interval
+            //     this.intervals.push(intervalId);
+            //     return intervalId;
+            //   },
+              
+            //   // Clear all tracked timeouts and intervals
+            //   clearAllTimers: function() {
+            //     // Clear all timeouts
+            //     this.timeouts.forEach(id => clearTimeout(id));
+            //     this.timeouts = [];
+                
+            //     // Clear all intervals
+            //     this.intervals.forEach(id => clearInterval(id));
+            //     this.intervals = [];
+            //   },
+              
+            //   // Reset state when stopping or changing location
+            //   resetState: function() {
+            //     this.attackChecks = 0;
+            //     this.caseNumber = 0;
+            //   },
+              
+            //   // Stop all activity immediately
+            //   stopImmediately: function() {
+            //     this.stop = true;
+            //     this.clearAllTimers();
+            //     this.resetState();
+            //   },
+              
+            //   // Check if player has moved manually
+            //   checkManualMovement: function() {
+            //     const x = GAME.char_data.x;
+            //     const y = GAME.char_data.y;
+            //     const currentLoc = GAME.current_loc.name;
+                
+            //     // Initialize last position if not set
+            //     if (this.lastX === null) {
+            //       this.lastX = x;
+            //       this.lastY = y;
+            //       this.lastLoc = currentLoc;
+            //       return false;
+            //     }
+                
+            //     // Check if position or location has changed
+            //     const hasMoved = (x !== this.lastX || y !== this.lastY || currentLoc !== this.lastLoc);
+                
+            //     // Update last position
+            //     this.lastX = x;
+            //     this.lastY = y;
+            //     this.lastLoc = currentLoc;
+                
+            //     return hasMoved;
+            //   },
+              
+            //   // Start the GŁĘBIA functionality
+            //   start: function() {
+            //     if (this.stop) return;
+                
+            //     // Check for manual movement
+            //     if (this.checkManualMovement()) {
+            //       // Reset attack state but continue running
+            //       this.clearAllTimers();
+            //       this.resetState();
+            //     }
+                
+            //     if (!GAME.is_loading) {
+            //       this.action();
+            //     } else {
+            //       this.safeTimeout(() => this.start(), this.wait);
+            //     }
+            //   },
+              
+            //   action: function() {
+            //     // Always check stop flag first
+            //     if (this.stop) return;
+                
+            //     // Check code first if enabled
+            //     if (this.code && this.checkCode()) {
+            //       this.safeTimeout(() => this.start(), 1800);
+            //       return;
+            //     }
+
+            //     const functions = [
+            //       this.check_position_x.bind(this),
+            //       this.check_position_y.bind(this),
+            //       this.check_players.bind(this),
+            //       this.check_players2.bind(this),
+            //       this.kill_players.bind(this),
+            //       this.check_glebia_location.bind(this),
+            //       this.go.bind(this)
+            //     ];
+
+            //     functions[this.caseNumber]();
+            //     this.caseNumber = (this.caseNumber + 1) % functions.length;
+            //   },
+              
+            //   go: function() {
+            //     if (this.stop) return;                
+            //     this.attackChecks = 0;
+
+            //     const x = GAME.char_data.x;
+            //     const y = GAME.char_data.y;
+
+            //     if (x === 11 && y === 11 && this.dogory && this.loc === 1) {
+            //       this.cofanie2();
+            //     } else if (x === 15 && y === 15 && this.move3 && this.loc === 2) {
+            //       this.cofanie();
+            //     } else if (x === 2 && y === 11 && this.loc === 1 && this.move1) {
+            //       this.przejdz();
+            //       this.safeTimeout(() => {
+            //         if (this.stop) return;
+            //         this.move(7);
+            //       }, 1000);
+            //     } else if (x === 1 && y === 1 && this.loc === 2 && this.move3) {
+            //       this.przejdz();
+            //       this.safeTimeout(() => {
+            //         if (this.stop) return;
+            //         this.move(7);
+            //       }, 1000);
+            //     } else if (((x === 7 && y === 7) && this.loc === 2 && this.move2) ||
+            //                (x === 9 && y === 7 && this.loc === 2 && this.move2)) {
+            //       this.move(3);
+            //     } else if (((x === 8 && y === 8) && this.loc === 2 && this.move2) ||
+            //                (x === 10 && y === 8 && this.loc === 2 && this.move2)) {
+            //       this.move(5);
+            //     } else if (x === 10 && y === 11 && this.loc === 1) {
+            //       this.dogory = true;
+            //       this.move(7);
+            //     } else if (x === 10 && y === 2 && this.loc === 1) {
+            //       this.dogory = false;
+            //       this.move(8);
+            //     } else if (x === 5 && y === 10 && this.loc === 1) {
+            //       this.move1 = true;
+            //       this.move(8);
+            //     } else if (x === 10 && y === 10 && this.loc === 1) {
+            //       this.move1 = true;
+            //       this.move(8);
+            //     } else if (x === 3 && y === 1 && this.loc === 2) {
+            //       this.move1 = false;
+            //       this.move(7);
+            //     } else if (x === 3 && y === 10 && this.loc === 1) {
+            //       this.move(4);
+            //     } else if (x === 2 && y === 8 && this.loc === 1) {
+            //       this.move(3);
+            //     } else if ((x === 11 && y === 11 && this.loc === 1) ||
+            //                (x === 15 && y === 15 && this.loc === 2)) {
+            //       this.move(2);
+            //     } else if (x === 5 && y === 7 && this.loc === 2) {
+            //       this.move2 = true;
+            //       this.move(7);
+            //     } else if (x === 13 && y === 7 && this.loc === 2) {
+            //       this.move2 = false;
+            //       this.move(7);
+            //     } else if (x === 12 && y === 15 && this.loc === 2) {
+            //       this.move3 = true;
+            //       this.move(7);
+            //     } else if (x === 5 && y === 11 && this.loc === 1) {
+            //       this.move3 = false;
+            //       this.move(7);
+            //     } else if (x === 10 && y === 15 && this.loc === 2) {
+            //       this.move3 = true;
+            //       this.move(7);
+            //     } else if (x === 7 && y === 11 && this.loc === 1) {
+            //       this.move3 = false;
+            //       this.move(7);
+            //     } else if (x === 7 && y === 7 && this.loc === 2) {
+            //       this.move(1);
+            //     } else if ((x < 11 && y % 2 !== 0 && this.loc === 1) ||
+            //                (x < 15 && y % 2 !== 0 && this.loc === 2)) {
+            //       this.move(7);
+            //     } else if ((x > 2 && y % 2 === 0 && this.loc === 1) ||
+            //                (x > 1 && y % 2 === 0 && this.loc === 2)) {
+            //       this.move(8);
+            //     } else if ((x === 11 && this.loc === 1) ||
+            //                (x === 2 && this.loc === 1) ||
+            //                (x === 3 && y === 9 && this.loc === 1) ||
+            //                (x === 1 && this.loc === 2) ||
+            //                (x === 15 && this.loc === 2) ||
+            //                (x === 7 && y === 7 && this.loc === 2)) {
+            //       this.move(1);
+            //     }
+            //   },
+              
+            //   cofanie: function() {
+            //     if (this.stop) return;
+                
+            //     const y = GAME.char_data.y;
+            //     if (y <= 1) {
+            //       this.safeTimeout(() => this.start(), this.wait);
+            //     } else {
+            //       GAME.emitOrder({
+            //         a: 4,
+            //         dir: 6,
+            //         vo: GAME.map_options.vo
+            //       });
+            //       this.safeTimeout(() => {
+            //         if (this.stop) return;
+            //         this.cofanie();
+            //       }, 50);
+            //     }
+            //   },
+              
+            //   cofanie2: function() {
+            //     if (this.stop) return;
+                
+            //     const y = GAME.char_data.y;
+            //     if (y <= 2) {
+            //       this.safeTimeout(() => this.start(), this.wait);
+            //     } else {
+            //       GAME.emitOrder({
+            //         a: 4,
+            //         dir: 2,
+            //         vo: GAME.map_options.vo
+            //       });
+            //       this.move1 = true;
+            //       this.safeTimeout(() => {
+            //         if (this.stop) return;
+            //         this.cofanie2();
+            //       }, 50);
+            //     }
+            //   },
+              
+            //   move: function(direction) {
+            //     if (this.stop) return;
+                
+            //     const valid = [2, 1, 8, 7, 5, 4, 3];
+            //     if (!valid.includes(direction)) return;
+            //     GAME.emitOrder({ a: 4, dir: direction, vo: GAME.map_options.vo });
+            //     this.safeTimeout(() => this.start(), this.wait);
+            //   },
+              
+            //   przejdz: function() {
+            //     if (this.stop) return;
+                
+            //     GAME.emitOrder({ a: 6, tpid: 0 });
+            //     this.safeTimeout(() => this.stop, 1000);
+            //       this.move3 = false
+            //       this.move1 = false
+            //   },
+              
+            //   check_position_x: function() {
+            //     if (this.stop) return;
+                
+            //     const x = GAME.char_data.x;
+            //     this.safeTimeout(() => this.start(), this.wait);
+            //   },
+              
+            //   check_position_y: function() {
+            //     if (this.stop) return;
+                
+            //     const y = GAME.char_data.y;
+            //     this.safeTimeout(() => this.start(), this.wait);
+            //   },
+              
+            //   check_players: function() {
+            //     if (this.stop) return;
+                
+            //     const playerList = document.getElementById("player_list_con");
+            //     if (!playerList || playerList.childElementCount === 0) {
+            //       return this.safeTimeout(() => this.start(), this.wait);
+            //     }
+                
+            //     // if (LOWLVL.stop == true) {
+            //       if (playerList.children[0].children[1].childElementCount === 3) {
+            //         const tabb2 = playerList.children[0].children[1].children[0].textContent.split(":");
+            //         if (parseInt(tabb2[1]) <= 1 && GAME.char_data.y === 2) {
+            //           return this.safeTimeout(() => this.check_players(), 150);
+            //         }
+            //       }
+            //     // }
+
+            //     this.safeTimeout(() => this.start(), this.wait);
+            //   },
+              
+            //   check_players2: function() {
+            //     if (this.stop) return;
+                
+            //     const playerList = document.getElementById("player_list_con");
+            //     if (!playerList || playerList.childElementCount === 0) {
+            //       return this.safeTimeout(() => this.start(), this.waitPvp);
+            //     }
+            //     // if (LOWLVL.stop == true) {
+            //       const tabb = playerList.children[0].children[1].children[0].textContent.split(":");
+            //       if (parseInt(tabb[2]) <= 30 && parseInt(tabb[1]) <= 0) {
+            //         return this.safeTimeout(() => this.check_players2(), 150);
+            //       }
+            //     // }
+            //     this.safeTimeout(() => this.start(), this.waitPvp);
+            //   },
+              
+            //   isEnemyAttackable: function(player) {
+            //     const cdElem = player.querySelector('.timer');
+            //     if (!cdElem) {
+            //       return true; // Brak timera = gracz gotowy
+            //     }
+            //     const parts = cdElem.textContent.split(':');
+            //     if (parts.length === 3) {
+            //       const seconds = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+            //       return seconds <= 5;
+            //     }
+            //     return true; // Nieprawidłowy format timera = zakładamy, że gotowy
+            //   },
+              
+            //   getAttackablePlayers: function(players) {
+            //     if (this.stop) return [];
+
+            //     const attackable = players.filter(player => {
+            //       const attackButton = player.querySelector('button[data-quick="1"]');
+            //       const targetId = attackButton?.getAttribute('data-char_id');
+            //       const isAttackable = targetId && this.isEnemyAttackable(player);
+            //       return isAttackable;
+            //     });
+            //     return attackable;
+            //   },
+              
+            //   attackNext: function(players, index, callback) {
+            //     if (this.stop) {
+            //       callback();
+            //       return;
+            //     }
+                
+            //     if (index >= players.length) {
+            //       callback();
+            //       return;
+            //     }
+
+            //     const player = players[index];
+            //     const attackButton = player.querySelector('button[data-quick="1"]');
+            //     const targetId = attackButton?.getAttribute('data-char_id');
+
+            //     if (targetId && this.isEnemyAttackable(player)) {
+            //       GAME.emitOrder({
+            //         a: 24,
+            //         char_id: targetId,
+            //         quick: 1
+            //       });
+            //     }
+
+            //     this.safeTimeout(() => this.attackNext(players, index + 1, callback), this.attackDelay);
+            //   },
+              
+            //   loadAllPlayers: function(callback) {
+            //     if (this.stop) {
+            //       callback();
+            //       return;
+            //     }
+                
+            //     const playerList = document.getElementById('player_list_con');
+            //     if (!playerList || playerList.children.length === 0) {
+            //       return this.safeTimeout(callback, 0);
+            //     }
+
+            //     const loadMore = playerList.querySelector('[data-option="load_more_players"]');
+            //     if (loadMore) {
+            //       loadMore.click();
+            //       this.safeTimeout(() => this.loadAllPlayers(callback), 800);
+            //     } else {
+            //       this.safeTimeout(callback, 0);
+            //     }
+            //   },
+              
+            //   kill_players: function() {
+            //     if (this.stop) return;
+            //     this.loadAllPlayers(() => {
+            //       if (this.stop) return;
+            //       const list = document.getElementById('player_list_con');
+            //       if (!list) {
+            //         return this.safeTimeout(() => this.start(), this.wait);
+            //       }
+
+            //       this.safeTimeout(() => {
+            //         if (this.stop) return;
+            //         // Usuwanie graczy z timerami > 5 sekund lub bez data-quick="1" z DOM
+            //         Array.from(list.children).forEach(player => {
+            //           const cdElem = player.querySelector('.timer');
+            //           const attackButton = player.querySelector('button[data-quick="1"]');
+            //           let remove = false;
+            //           if (cdElem) {
+            //             const parts = cdElem.textContent.split(':');
+            //             if (parts.length === 3) {
+            //               const seconds = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+            //               if (seconds > 5) remove = true;
+            //             }
+            //           }
+            //           if (!attackButton) remove = true;
+            //           if (remove) player.remove();
+            //         });
+
+            //         const attackablePlayers = this.getAttackablePlayers(Array.from(list.children));
+
+            //         if (attackablePlayers.length === 0 || this.stop) {
+            //           this.attackChecks++;
+            //           if (this.attackChecks >= 3 || this.stop) {
+            //             this.attackChecks = 0;
+            //             this.safeTimeout(() => this.start(), this.wait);
+            //           } else {
+            //             this.loadAllPlayers(() => {
+            //               if (!this.stop) {
+            //                 this.safeTimeout(() => this.kill_players(), this.waitPvp);
+            //               }
+            //             });
+            //           }
+            //           return;
+            //         }
+
+            //         this.attackNext(attackablePlayers, 0, () => {
+            //           if (this.stop) return;
+                      
+            //           this.attackChecks++;
+            //           this.loadAllPlayers(() => {
+            //             if (this.stop) return;
+                        
+            //             this.safeTimeout(() => {
+            //               if (this.stop) return;
+                          
+            //               Array.from(list.children).forEach(player => {
+            //                 const cdElem = player.querySelector('.timer');
+            //                 const attackButton = player.querySelector('button[data-quick="1"]');
+            //                 let remove = false;
+            //                 if (cdElem) {
+            //                   const parts = cdElem.textContent.split(':');
+            //                   if (parts.length === 3) {
+            //                     const seconds = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+            //                     if (seconds > 5) remove = true;
+            //                   }
+            //                 }
+            //                 if (!attackButton) remove = true;
+            //                 if (remove) player.remove();
+            //               });
+
+            //               const stillAttackable = this.getAttackablePlayers(Array.from(list.children)).length > 0;
+            //               if ((stillAttackable && this.attackChecks < 3) && !this.stop) {
+            //                 this.safeTimeout(() => this.kill_players(), this.waitPvp);
+            //               } else {
+            //                 this.attackChecks = 0;
+            //                 this.safeTimeout(() => this.start(), this.wait);
+            //               }
+            //             }, this.waitPvp);
+            //           });
+            //         });
+            //       }, this.wait);
+            //     });
+            //   },
+              
+            //   check_glebia_location: function() {
+            //     if (this.stop) return;
+
+            //     const locationMap = {
+            //       "Głębia": 1,
+            //       "Głębia Rajskiej Sali": 2
+            //     };
+
+            //     let currentLoc = locationMap[GAME.current_loc.name] || 7;
+            //     if (this.loc !== null && this.loc !== currentLoc) {
+            //       this.attackChecks = 0;
+            //     }
+            //     this.loc = currentLoc;
+            //     this.safeTimeout(() => this.start(), this.wait);
+            //   },
+
+            //   checkCode: function() {
+            //     if (!this.code) return false;
+            //     if (GAME.quick_opts.ssj && $("#ssj_bar").css("display") === "none") {
+            //       setTimeout(() => {
+            //         GAME.socket.emit('ga', {
+            //           a: 18,
+            //           type: 5,
+            //           tech_id: GAME.quick_opts.ssj[0]
+            //         });
+            //       }, 1500);
+            //       return true;
+            //     } else if ($('#ssj_status').text() == "--:--:--" && GAME.quick_opts.ssj) {
+            //       setTimeout(() => {
+            //         GAME.socket.emit('ga', {
+            //           a: 18,
+            //           type: 6
+            //         });
+            //       }, 1500);
+            //       return true;
+            //     } else if ($('#ssj_status').text() <= '00:00:05' && GAME.quick_opts.ssj) {
+            //       return true;
+            //     } else if ($("#train_uptime").find('.timer').length == 0 && !GAME.is_training) {
+            //       GAME.socket.emit('ga', {
+            //         a: 8,
+            //         type: 2,
+            //         stat: 1,
+            //         duration: 1
+            //       });
+            //       setTimeout(() => {
+            //         GAME.socket.emit('ga', {
+            //           a: 8,
+            //           type: 5,
+            //           apud: 'vzaaa'
+            //         });
+            //       }, 1600);
+            //       return true;
+            //     } else if (GAME.is_training && $("#train_uptime").find('.timer').length == 1) {
+            //       setTimeout(() => {
+            //         GAME.socket.emit('ga', {
+            //           a: 8,
+            //           type: 3
+            //         });
+            //       }, 1600);
+            //       return true;
+            //     } else if (GAME.is_training) {
+            //       GAME.socket.emit('ga', {
+            //         a: 8,
+            //         type: 3
+            //       });
+            //       return true;
+            //     }
+            //     return false;
+            //   }
+            // };
             createPanel();
             setTimeout(() => {
                 GAME.socket.emit('ga', {
@@ -3267,5 +3922,25 @@ if (typeof GAME === 'undefined') {} else {
                     type: 23
                 });
             }, 900);
+            $(document).ready(() => {
+              if (typeof DAILY_QUESTS_LOCATIONS !== 'undefined' && DAILY_QUESTS_LOCATIONS.length > 0) {
+                DAILY_QUESTS.initialize(DAILY_QUESTS_LOCATIONS);
+                updateDailyQuestsUI();
+              } else {
+                console.error("[DAILY QUESTS] Locations not found. Make sure daily_quests_locations.js is loaded before daily_quests_manager.js");
+              }
+              
+              // Add event handler for location toggles
+              $(document).on('change', '.dq_location_toggle', function() {
+                const locationIndex = $(this).closest('.dq_location').data('index');
+                DAILY_QUESTS.locations[locationIndex].disabled = !this.checked;
+                updateQuestsList();
+                updateProgressCounter();
+              });
+              
+              // Make updateDailyQuestsUI available globally for the manager to call
+              window.updateDailyQuestsUI = updateDailyQuestsUI;
+              window.setStatusMessage = setStatusMessage;
+            });
     }, 50);
 }

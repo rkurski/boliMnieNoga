@@ -1,0 +1,1166 @@
+const QUEST_FLOW_STATES = {
+  IDLE: "idle",
+  TELEPORTING: "teleporting",
+  MOVING_TO_START: "moving_to_start",
+  INTERACTING_START: "interacting_start",
+  DETECTING_QUEST: "detecting_quest",
+  EXECUTING_QUEST: "executing_quest",
+  MOVING_TO_COMPLETE: "moving_to_complete",
+  INTERACTING_COMPLETE: "interacting_complete",
+  COMPLETED: "completed",
+  FAILED: "failed"
+};
+
+const QUEST_TYPE_PATTERNS = {
+  RESOURCES: ["Zbierz zasób"],
+  MOBS: ["Pokonaj"],
+  PLAYERS: ["Wygrane walki PvP"],
+  LPVM: ["Wykonane Listy Gończe PvM"],
+  EXPEDITION: ["Udaj się na wyprawy"],
+  // INSTANCES: ["Wykonane dowolne instancje"],
+  // DONATIONS: ["Oddaj przedmiot"]
+};
+
+// Define the DAILY_QUESTS object
+const DAILY_QUESTS = {
+  // Properties
+  locations: [],
+  settings: {
+    active: false,
+    skipDisabled: true,
+    useSSJ: true,
+    useCodes: false,
+    useMultifight: true,
+    maxFailedAttempts: 3,
+    waitBetweenQuests: 2000
+  },
+  runtime: {
+    currentLocationIndex: 0,
+    currentState: QUEST_FLOW_STATES.IDLE,
+    questType: null,
+    questCount: 0,
+    questProgress: 0,
+    failedAttempts: 0,
+    isProcessing: false,
+    isTeleporting: false,
+    isMoving: false,
+    lastActionTime: 0,
+    timeoutId: null,
+    intervalId: null,
+    matrix: [],
+    currentPath: []
+  },
+  
+  initialize: function(locations) {
+    this.locations = locations.map(loc => ({
+      ...loc,
+      disabled: false,
+      completed: false
+    }));
+    this.log("Daily Quests Manager initialized with " + this.locations.length + " locations");
+  },
+  
+  // Main execution loop
+  mainLoop: function() {
+    // If not active, do nothing
+    if (!this.settings.active) return;
+    
+    // Clear any existing timeouts
+    this.clearTimeouts();
+    
+    // Check if all quests are completed
+    if (this.checkAllQuestsCompleted()) {
+      this.log("Ukończono wszystkie misje dzienne!");
+      this.stop();
+      return;
+    }
+    
+    // Get current location
+    const currentLocation = this.getCurrentLocation();
+    if (!currentLocation) {
+      this.log("No more locations to process");
+      this.stop();
+      return;
+    }
+    
+    // Process the current state
+    this.processCurrentState(currentLocation);
+  },
+  
+  // Process the current state for the given location
+  processCurrentState: function(location) {
+    this.log(`Processing state: ${this.runtime.currentState} for location: ${location.name}`);
+    
+    switch (this.runtime.currentState) {
+      case QUEST_FLOW_STATES.IDLE:
+        this.runtime.currentState = QUEST_FLOW_STATES.TELEPORTING;
+        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+        break;
+        
+      case QUEST_FLOW_STATES.TELEPORTING:
+        this.teleportToLocation(location.id);
+        break;
+        
+      case QUEST_FLOW_STATES.MOVING_TO_START:
+        this.navigateToCoordinates(location.coords);
+        break;
+        
+      case QUEST_FLOW_STATES.INTERACTING_START:
+        this.interactWithNPC("start");
+        break;
+        
+      case QUEST_FLOW_STATES.DETECTING_QUEST:
+        this.detectQuestType();
+        break;
+        
+      case QUEST_FLOW_STATES.EXECUTING_QUEST:
+        this.executeQuest();
+        break;
+        
+      case QUEST_FLOW_STATES.MOVING_TO_COMPLETE:
+        this.navigateToCoordinates(location.coords);
+        break;
+        
+      case QUEST_FLOW_STATES.INTERACTING_COMPLETE:
+        this.interactWithNPC("complete");
+        break;
+        
+      case QUEST_FLOW_STATES.COMPLETED:
+        this.completeQuest(location);
+        break;
+        
+      case QUEST_FLOW_STATES.FAILED:
+        this.handleFailedQuest(location);
+        break;
+        
+      default:
+        this.log(`Unknown state: ${this.runtime.currentState}`);
+        this.runtime.currentState = QUEST_FLOW_STATES.IDLE;
+        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+    }
+  },
+  
+  // Teleport to a location
+  teleportToLocation: function(locationId) {
+    if (this.runtime.isTeleporting) return;
+    
+    this.runtime.isTeleporting = true;
+    this.log(`Teleporting to location ID: ${locationId}`);
+    
+    // Check if already at the location
+    if (String(GAME.char_data.loc) === String(locationId)) {
+      this.log("Already at the target location");
+      this.runtime.isTeleporting = false;
+      this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_START;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      return;
+    }
+    
+    // Emit teleport command
+    GAME.socket.emit('ga', { a: 12, type: 18, loc: locationId });
+    
+    // Check teleport completion
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const checkTeleportComplete = () => {
+      if (!this.settings.active) {
+        this.runtime.isTeleporting = false;
+        return;
+      }
+      
+      attempts++;
+      const teleported = String(GAME.char_data.loc) === String(locationId);
+      
+      if (teleported) {
+        this.log("Teleport successful");
+        this.runtime.isTeleporting = false;
+        this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_START;
+        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 1000);
+      } else if (attempts < maxAttempts) {
+        this.runtime.timeoutId = setTimeout(checkTeleportComplete, 500);
+      } else {
+        this.log("Teleport failed after multiple attempts");
+        this.runtime.isTeleporting = false;
+        this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      }
+    };
+    
+    this.runtime.timeoutId = setTimeout(checkTeleportComplete, 1000);
+  },
+  
+  // Navigate to coordinates using pathfinding
+  navigateToCoordinates: function(coords) {
+    if (this.runtime.isMoving) return;
+    
+    this.runtime.isMoving = true;
+    this.log(`Navigating to coordinates: ${coords.x}, ${coords.y}`);
+    
+    // Check if already at coordinates
+    if (GAME.char_data.x === coords.x && GAME.char_data.y === coords.y) {
+      this.log("Already at target coordinates");
+      this.runtime.isMoving = false;
+      
+      // Update state based on current state
+      if (this.runtime.currentState === QUEST_FLOW_STATES.MOVING_TO_START) {
+        this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_START;
+      } else if (this.runtime.currentState === QUEST_FLOW_STATES.MOVING_TO_COMPLETE) {
+        this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_COMPLETE;
+      }
+      
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      return;
+    }
+    
+    // Use matrix pathfinding
+    if (!this.createMatrix()) {
+      this.log("Failed to create navigation matrix");
+      this.runtime.isMoving = false;
+      this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      return;
+    }
+    
+    // Find path to target
+    if (!this.findPath(coords.x, coords.y)) {
+      this.log("No path found to target coordinates");
+      this.runtime.isMoving = false;
+      this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      return;
+    }
+    
+    // Start moving along the path
+    this.moveAlongPath();
+  },
+  
+  // Create matrix from game map data for pathfinding
+  createMatrix: function() {
+    this.runtime.matrix = [];
+    const mapData = GAME.mapcell;
+    
+    if (!mapData) {
+      this.log("Map data not available");
+      return false;
+    }
+    
+    const maxY = parseInt(GAME.map.max_y);
+    const maxX = parseInt(GAME.map.max_x);
+    
+    for (let i = 0; i < maxY; i++) {
+      this.runtime.matrix[i] = [];
+      for (let j = 0; j < maxX; j++) {
+        const cellKey = parseInt(j + 1) + '_' + parseInt(i + 1);
+        if (mapData[cellKey] && mapData[cellKey].m == 1) {
+          // This is a blocker/wall
+          this.runtime.matrix[i][j] = 1;
+        } else {
+          // This is a walkable cell
+          this.runtime.matrix[i][j] = 0;
+        }
+      }
+    }
+    return true;
+  },
+  
+  // Find path to target using matrix pathfinding
+  findPath: function(targetX, targetY) {
+    // Convert to 0-based coordinates for the matrix
+    const startX = GAME.char_data.x - 1;
+    const startY = GAME.char_data.y - 1;
+    const endX = targetX - 1;
+    const endY = targetY - 1;
+    
+    // Use pathfinding to find a path
+    this.runtime.currentPath = [];
+    
+    // Simple BFS pathfinding implementation
+    const queue = [[startX, startY]];
+    const visited = {};
+    const parent = {};
+    visited[`${startX}_${startY}`] = true;
+    
+    while (queue.length > 0) {
+      const [x, y] = queue.shift();
+      
+      // Check if we've reached the target
+      if (x === endX && y === endY) {
+        // Reconstruct the path
+        let current = `${endX}_${endY}`;
+        while (current !== `${startX}_${startY}`) {
+          const [cx, cy] = current.split('_').map(Number);
+          this.runtime.currentPath.unshift([cx, cy]);
+          current = parent[current];
+        }
+        return true;
+      }
+      
+      // Check all 8 directions
+      const directions = [
+        [0, -1], [1, -1], [1, 0], [1, 1], 
+        [0, 1], [-1, 1], [-1, 0], [-1, -1]
+      ];
+      
+      for (const [dx, dy] of directions) {
+        const nx = x + dx;
+        const ny = y + dy;
+        
+        // Check if the new position is valid
+        if (nx >= 0 && nx < this.runtime.matrix[0].length && 
+            ny >= 0 && ny < this.runtime.matrix.length && 
+            this.runtime.matrix[ny][nx] === 0 && 
+            !visited[`${nx}_${ny}`]) {
+          
+          queue.push([nx, ny]);
+          visited[`${nx}_${ny}`] = true;
+          parent[`${nx}_${ny}`] = `${x}_${y}`;
+        }
+      }
+    }
+    
+    // No path found
+    return false;
+  },
+  
+  // Move along the calculated path
+  moveAlongPath: function() {
+    if (!this.settings.active || !this.runtime.currentPath || this.runtime.currentPath.length === 0) {
+      this.runtime.isMoving = false;
+      
+      // Update state based on current state
+      if (this.runtime.currentState === QUEST_FLOW_STATES.MOVING_TO_START) {
+        this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_START;
+      } else if (this.runtime.currentState === QUEST_FLOW_STATES.MOVING_TO_COMPLETE) {
+        this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_COMPLETE;
+      }
+      
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      return;
+    }
+    
+    // Get the next step in the path
+    const nextStep = this.runtime.currentPath[0];
+    const nextX = nextStep[0] + 1; // Convert back to 1-based coordinates
+    const nextY = nextStep[1] + 1;
+    
+    // Determine direction to move
+    let direction = 0;
+    const currentX = GAME.char_data.x;
+    const currentY = GAME.char_data.y;
+    
+    if (nextX > currentX && nextY === currentY) {
+      direction = 7; // Right
+    } else if (nextX < currentX && nextY === currentY) {
+      direction = 8; // Left
+    } else if (nextX === currentX && nextY > currentY) {
+      direction = 1; // Down
+    } else if (nextX === currentX && nextY < currentY) {
+      direction = 2; // Up
+    } else if (nextX > currentX && nextY > currentY) {
+      direction = 3; // Down-right
+    } else if (nextX < currentX && nextY < currentY) {
+      direction = 6; // Up-left
+    } else if (nextX > currentX && nextY < currentY) {
+      direction = 5; // Up-right
+    } else if (nextX < currentX && nextY > currentY) {
+      direction = 4; // Down-left
+    }
+    
+    if (direction !== 0) {
+      // Send movement command
+      GAME.socket.emit('ga', {
+        a: 4,
+        dir: direction,
+        vo: (GAME.map_options ? GAME.map_options.vo : undefined)
+      });
+      
+      // Set up a check for movement completion
+      this.runtime.intervalId = setInterval(() => {
+        if (!this.settings.active) {
+          clearInterval(this.runtime.intervalId);
+          this.runtime.intervalId = null;
+          this.runtime.isMoving = false;
+          return;
+        }
+        
+        // Check if we've reached the next position
+        if (GAME.char_data.x === nextX && GAME.char_data.y === nextY) {
+          clearInterval(this.runtime.intervalId);
+          this.runtime.intervalId = null;
+          
+          // Remove the step we just completed
+          this.runtime.currentPath.shift();
+          
+          // Continue to the next step
+          this.runtime.timeoutId = setTimeout(() => {
+            this.moveAlongPath();
+          }, 100);
+        }
+      }, 200);
+    } else {
+      // If we can't determine a direction, try to recalculate the path
+      this.log("Recalculating path...");
+      
+      const targetCoords = {
+        x: this.runtime.currentPath[this.runtime.currentPath.length - 1][0] + 1,
+        y: this.runtime.currentPath[this.runtime.currentPath.length - 1][1] + 1
+      };
+      
+      if (this.findPath(targetCoords.x, targetCoords.y)) {
+        this.runtime.timeoutId = setTimeout(() => {
+          this.moveAlongPath();
+        }, 100);
+      } else {
+        this.log("Failed to recalculate path");
+        this.runtime.isMoving = false;
+        this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      }
+    }
+  },
+  
+  // Interact with NPC (press X)
+  interactWithNPC: function(interactionType) {
+    this.log(`Interacting with NPC (${interactionType})`);
+    
+    // Press X key to interact
+    this.pressKey("x");
+    
+    // Wait for interaction to complete
+    this.runtime.timeoutId = setTimeout(() => {
+      if (interactionType === "start") {
+        this.runtime.currentState = QUEST_FLOW_STATES.DETECTING_QUEST;
+      } else if (interactionType === "complete") {
+        // Check if there's a "finish_quest" button
+        const finishButton = document.querySelector('button[data-option="finish_quest"]');
+        if (finishButton) {
+          finishButton.click();
+          this.log("Clicked finish quest button");
+        }
+        
+        this.runtime.currentState = QUEST_FLOW_STATES.COMPLETED;
+      }
+      
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 1000);
+    }, 1500);
+  },
+  
+  // Detect quest type from dialog text or quest window
+  detectQuestType: function() {
+    this.log("Detecting quest type");
+    
+    // Check if quest window is open
+    const questWindow = document.querySelector('#quest_con');
+    if (questWindow) {
+      // Get quest requirements text
+      const requirementsDiv = questWindow.querySelector('.quest_desc div');
+      if (requirementsDiv) {
+        const requirementsText = requirementsDiv.textContent.toLowerCase();
+        
+        // Check if quest is already completed
+        const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+        if (questWarunek) {
+          const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+          const max = parseInt(questWarunek.getAttribute('data-max') || '0');
+          
+          if (count >= max) {
+            this.log("Quest already completed, moving to completion phase");
+            this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_COMPLETE;
+            this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+            return;
+          }
+          
+          // Set quest count
+          this.runtime.questCount = max;
+        }
+        
+        // Detect quest type from requirements text
+        let questType = null;
+        
+        // Check for resources quest
+        if (requirementsText.includes("zbierz zasób")) {
+          questType = "resources";
+        }
+        // Check for mobs quest
+        else if (requirementsText.includes("pokonaj:")) {
+          questType = "mobs";
+          
+          // Check mob type and difficulty
+          const mobTypeMatch = requirementsText.match(/\(([^)]+)\)/);
+          if (mobTypeMatch) {
+            const mobType = mobTypeMatch[1].toLowerCase();
+            
+            // Set RESP ignore settings based on mob difficulty
+            if (mobType.includes("normal")) {
+              this.log("Setting RESP to target Normal mobs");
+              window.kws_spawner_ignore_0 = 0;
+              window.kws_spawner_ignore_1 = 1;
+              window.kws_spawner_ignore_2 = 1;
+              window.kws_spawner_ignore_3 = 1;
+              window.kws_spawner_ignore_4 = 1;
+            } else if (mobType.includes("champion")) {
+              this.log("Setting RESP to target Champion mobs");
+              window.kws_spawner_ignore_0 = 1;
+              window.kws_spawner_ignore_1 = 0;
+              window.kws_spawner_ignore_2 = 1;
+              window.kws_spawner_ignore_3 = 1;
+              window.kws_spawner_ignore_4 = 1;
+            } else if (mobType.includes("elita")) {
+              this.log("Setting RESP to target Elite mobs");
+              window.kws_spawner_ignore_0 = 1;
+              window.kws_spawner_ignore_1 = 1;
+              window.kws_spawner_ignore_2 = 0;
+              window.kws_spawner_ignore_3 = 1;
+              window.kws_spawner_ignore_4 = 1;
+            } else if (mobType.includes("legendarny")) {
+              this.log("Setting RESP to target Legendary mobs");
+              window.kws_spawner_ignore_0 = 1;
+              window.kws_spawner_ignore_1 = 1;
+              window.kws_spawner_ignore_2 = 1;
+              window.kws_spawner_ignore_3 = 0;
+              window.kws_spawner_ignore_4 = 1;
+            } else if (mobType.includes("epicki")) {
+              this.log("Setting RESP to target Epic mobs");
+              window.kws_spawner_ignore_0 = 1;
+              window.kws_spawner_ignore_1 = 1;
+              window.kws_spawner_ignore_2 = 1;
+              window.kws_spawner_ignore_3 = 1;
+              window.kws_spawner_ignore_4 = 0;
+            }
+          }
+        }
+        // Check for players quest
+        else if (requirementsText.includes("wygrane walki pvp")) {
+          questType = "players";
+        }
+        // Check for LPVM quest
+        else if (requirementsText.includes("wykonane listy gończe pvm")) {
+          questType = "lpvm";
+        }
+        // Check for expedition quest
+        else if (requirementsText.includes("udaj się na wyprawy")) {
+          questType = "expedition";
+        }
+        
+        if (questType) {
+          this.log(`Detected quest type: ${questType}, count: ${this.runtime.questCount}`);
+          this.runtime.questType = questType;
+          this.runtime.questProgress = 0;
+          this.runtime.currentState = QUEST_FLOW_STATES.EXECUTING_QUEST;
+          this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+        } else {
+          this.log("Could not detect quest type, assuming it's a simple interaction quest");
+          // For simple quests that just require talking, we can move directly to completion
+          this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_COMPLETE;
+          this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+        }
+      } else {
+        this.log("No requirements found, assuming it's a simple interaction quest");
+        this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_COMPLETE;
+        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      }
+    } else {
+      this.log("No quest window found, retrying interaction");
+      this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_START;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+    }
+  },
+  
+  // Execute the detected quest
+  executeQuest: function() {
+    this.log(`Executing quest type: ${this.runtime.questType}`);
+    
+    switch (this.runtime.questType) {
+      case "resources":
+        this.executeResourcesQuest();
+        break;
+      case "mobs":
+        this.executeMobsQuest();
+        break;
+      case "players":
+        this.executePlayersQuest();
+        break;
+      case "lpvm":
+        this.executeLPVMQuest();
+        break;
+      case "expedition":
+        this.executeExpeditionQuest();
+        break;
+      default:
+        this.log("Unknown quest type, moving to completion");
+        this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+    }
+  },
+  
+  // Execute a resources collection quest
+  executeResourcesQuest: function() {
+    this.log(`Starting resource collection: ${this.runtime.questCount} resources needed`);
+    
+    // Check if RES is already active
+    if (RES && !RES.stop) {
+      RES.stop = true;
+      $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
+    }
+    
+    // Start RES
+    RES.stop = false;
+    RES.action();
+    $(".res_res .res_status").removeClass("red").addClass("green").html("On");
+    
+    // Monitor collection progress
+    let initialCollected = RES.collected || 0;
+    let checkInterval = 2000;
+    
+    const checkCollectionProgress = () => {
+      if (!this.settings.active) {
+        if (RES && !RES.stop) {
+          RES.stop = true;
+          $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
+        }
+        return;
+      }
+      
+      // Check if quest window is still open
+      const questWindow = document.querySelector('#quest_con');
+      if (questWindow) {
+        const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+        if (questWarunek) {
+          const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+          const max = parseInt(questWarunek.getAttribute('data-max') || '0');
+          
+          this.runtime.questProgress = count;
+          this.log(`Resource collection progress: ${count}/${max}`);
+          
+          if (count >= max) {
+            // Stop RES
+            RES.stop = true;
+            $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
+            
+            // Move to completion
+            this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+            this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+            return;
+          }
+        }
+      }
+      
+      // Continue checking
+      this.runtime.timeoutId = setTimeout(checkCollectionProgress, checkInterval);
+    };
+    
+    this.runtime.timeoutId = setTimeout(checkCollectionProgress, checkInterval);
+  },
+  
+  // Execute a kill mobs quest
+  executeMobsQuest: function() {
+    this.log(`Starting to kill mobs: ${this.runtime.questCount} mobs needed`);
+    GAME.socket.emit('ga', { a: 15, type: 13});
+    // Check if RESP is already active
+    if (RESP && !RESP.stop) {
+      RESP.stop = true;
+      $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
+    }
+    
+    // Configure RESP settings
+    RESP.stop = true;
+    RESP.code = this.settings.useCodes;
+    RESP.checkSSJ = this.settings.useSSJ;
+    RESP.multifight = this.settings.useMultifight;
+    
+    // Start RESP
+    RESP.stop = false;
+    RESP.action();
+    $(".resp_resp .resp_status").removeClass("red").addClass("green").html("On");
+    
+    // Monitor kill progress
+    let checkInterval = 10000;
+    
+    const checkKillProgress = () => {
+      if (!this.settings.active) {
+        if (RESP && !RESP.stop) {
+          RESP.stop = true;
+          GAME.socket.emit('ga', { a: 16 });
+          $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
+        }
+        return;
+      }
+      
+      // Check if quest window is still open
+      const questWindow = document.querySelector('#quest_con');
+      if (questWindow) {
+        const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+        if (questWarunek) {
+          const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+          const max = parseInt(questWarunek.getAttribute('data-max') || '0');
+          
+          this.runtime.questProgress = count;
+          this.log(`Kills progress: ${count}/${max}`);
+          
+          if (count >= max) {
+            // Stop RESP
+            RESP.stop = true;
+            $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
+            
+            // Move to completion
+            this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+            this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+            return;
+          }
+        }
+      }
+      
+      // Continue checking
+      this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
+    };
+    
+    this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
+  },
+  
+  // Execute a kill players quest
+  executePlayersQuest: function() {
+    this.log(`Starting to kill players: ${this.runtime.questCount} players needed`);
+    
+    // Check if PVP is already active
+    if (PVP && !PVP.stop) {
+      PVP.stop = true;
+      $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
+    }
+    
+    // Configure PVP settings
+    PVP.stop = true;
+    PVP.code = false;
+    
+    // Start PVP
+    PVP.stop = false;
+    PVP.action();
+    $(".pvp_pvp .pvp_status").removeClass("red").addClass("green").html("On");
+    
+    // Monitor kill progress
+    let checkInterval = 2000;
+    
+    const checkKillProgress = () => {
+      if (!this.settings.active) {
+        if (PVP && !PVP.stop) {
+          PVP.stop = true;
+          $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
+        }
+        return;
+      }
+      
+      // Check if quest window is still open
+      const questWindow = document.querySelector('#quest_con');
+      if (questWindow) {
+        const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+        if (questWarunek) {
+          const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+          const max = parseInt(questWarunek.getAttribute('data-max') || '0');
+          
+          this.runtime.questProgress = count;
+          this.log(`PVP kills progress: ${count}/${max}`);
+          
+          if (count >= max) {
+            // Stop PVP
+            PVP.stop = true;
+            $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
+            
+            // Move to completion
+            this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+            this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+            return;
+          }
+        }
+      }
+      
+      // Continue checking
+      this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
+    };
+    
+    this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
+  },
+  
+  // Execute an LPVM quest
+  executeLPVMQuest: function() {
+    this.log(`Starting LPVM task: ${this.runtime.questCount} quests needed`);
+    
+    // Check if LPVM is already active
+    if (LPVM && !LPVM.Stop) {
+      LPVM.Stop = true;
+      $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
+    }
+    
+    // Configure LPVM settings based on reborn level
+    LPVM.Stop = true;
+    const reborn = GAME.char_data.reborn;
+    
+    // Reset all LPVM settings
+    LPVM.g = false;
+    LPVM.u = false;
+    LPVM.s = true;
+    LPVM.h = false;
+    LPVM.m = false;
+    
+    // Set appropriate reborn level
+    // if (reborn === 0) {
+    //   $(".lpvm_g .lpvm_status").removeClass("red").addClass("green").html("On");
+    //   LPVM.g = true;
+    // } else if (reborn === 1) {
+    //   $(".lpvm_u .lpvm_status").removeClass("red").addClass("green").html("On");
+    //   LPVM.u = true;
+    // } else if (reborn === 2) {
+    //   $(".lpvm_s .lpvm_status").removeClass("red").addClass("green").html("On");
+    //   LPVM.s = true;
+    // } else if (reborn === 3) {
+    //   $(".lpvm_h .lpvm_status").removeClass("red").addClass("green").html("On");
+    //   LPVM.h = true;
+    // } else if (reborn >= 4) {
+    //   $(".lpvm_m .lpvm_status").removeClass("red").addClass("green").html("On");
+    //   LPVM.m = true;
+    // }
+    
+    // Start LPVM
+    LPVM.Stop = false;
+    LPVM.action();
+    $(".lpvm_lpvm .lpvm_status").removeClass("red").addClass("green").html("On");
+    
+    // Monitor LPVM progress
+    let initialCompleted = parseInt($('.pvm_killed b').text()) || 0;
+    let checkInterval = 5000;
+    
+    const checkLPVMProgress = () => {
+      if (!this.settings.active) {
+        if (LPVM && !LPVM.Stop) {
+          LPVM.Stop = true;
+          $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
+        }
+        return;
+      }
+      
+      // Check if quest window is still open
+      const questWindow = document.querySelector('#quest_con');
+      if (questWindow) {
+        const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+        if (questWarunek) {
+          const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+          const max = parseInt(questWarunek.getAttribute('data-max') || '0');
+          
+          this.runtime.questProgress = count;
+          this.log(`LPVM progress: ${count}/${max}`);
+          
+          if (count >= max) {
+            // Stop LPVM
+            LPVM.Stop = true;
+            $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
+            
+            // Move to completion
+            this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+            this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+            return;
+          }
+        }
+      }
+      
+      // Continue checking
+      this.runtime.timeoutId = setTimeout(checkLPVMProgress, checkInterval);
+    };
+    
+    this.runtime.timeoutId = setTimeout(checkLPVMProgress, checkInterval);
+  },
+  
+  // Execute an expedition quest
+  executeExpeditionQuest: function() {
+    this.log(`Starting expedition task: ${this.runtime.questCount} expeditions needed`);
+    
+    // We'll use the autoExpeditions feature from kwsv3 if available
+    if (window.kwsv3 && typeof kwsv3.manageAutoExpeditions === "function") {
+      // First check if it's already active
+      if (kwsv3.autoExpeditions) {
+        kwsv3.manageAutoExpeditions(); // Turn it off
+      }
+      
+      // Configure expedition settings
+      // kwsv3.settings.aeCodes = this.settings.useCodes;
+      
+      // Start expeditions
+      kwsv3.manageAutoExpeditions();
+      
+      // Monitor expedition progress
+      let checkInterval = 301000; // Expeditions take longer
+      
+      const checkExpeditionProgress = () => {
+        if (!this.settings.active) {
+          if (window.kwsv3 && kwsv3.autoExpeditions) {
+            kwsv3.manageAutoExpeditions(); // Turn it off
+          }
+          return;
+        }
+        
+        // Check if quest window is still open
+        const questWindow = document.querySelector('#quest_con');
+        if (questWindow) {
+          const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+          if (questWarunek) {
+            const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+            const max = parseInt(questWarunek.getAttribute('data-max') || '0');
+            
+            this.runtime.questProgress = count;
+            this.log(`Expedition progress: ${count}/${max}`);
+            
+            if (count >= max) {
+              // Stop expeditions
+              if (window.kwsv3 && kwsv3.autoExpeditions) {
+                kwsv3.manageAutoExpeditions();
+              }
+              
+              // Move to completion
+              this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+              this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+              return;
+            }
+          }
+        }
+        
+        // Continue checking
+        this.runtime.timeoutId = setTimeout(checkExpeditionProgress, checkInterval);
+      };
+      
+      this.runtime.timeoutId = setTimeout(checkExpeditionProgress, checkInterval);
+    } else {
+      this.log("Expedition feature not available, skipping quest");
+      this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+    }
+  },
+  
+  // Complete the current quest
+  completeQuest: function(location) {
+    this.log(`Completing quest: ${location.name}`);
+    
+    // Mark the location as completed
+    location.completed = true;
+    
+    // Move to the next location
+    this.runtime.currentLocationIndex++;
+    this.runtime.currentState = QUEST_FLOW_STATES.IDLE;
+    this.runtime.questType = null;
+    this.runtime.questCount = 0;
+    this.runtime.questProgress = 0;
+    this.runtime.failedAttempts = 0;
+    
+    // Update UI
+    this.updateUI();
+    
+    // Continue to next quest
+    this.runtime.timeoutId = setTimeout(() => this.mainLoop(), this.settings.waitBetweenQuests);
+  },
+  
+  // Handle a failed quest
+  handleFailedQuest: function(location) {
+    this.log(`Quest failed: ${location.name}`);
+    this.runtime.failedAttempts++;
+    
+    if (this.runtime.failedAttempts >= this.settings.maxFailedAttempts) {
+      this.log(`Maximum failed attempts (${this.settings.maxFailedAttempts}) reached, skipping quest`);
+      
+      // Mark the location as completed (skipped)
+      location.completed = true;
+      
+      // Move to the next location
+      this.runtime.currentLocationIndex++;
+      this.runtime.currentState = QUEST_FLOW_STATES.IDLE;
+      this.runtime.questType = null;
+      this.runtime.questCount = 0;
+      this.runtime.questProgress = 0;
+      this.runtime.failedAttempts = 0;
+      
+      // Update UI
+      this.updateUI();
+      
+      // Continue to next quest
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), this.settings.waitBetweenQuests);
+    } else {
+      this.log(`Retrying quest (attempt ${this.runtime.failedAttempts}/${this.settings.maxFailedAttempts})`);
+      this.runtime.currentState = QUEST_FLOW_STATES.IDLE;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 2000);
+    }
+  },
+  
+  // Get the current location being processed
+  getCurrentLocation: function() {
+    // Check if current index is valid
+    if (this.runtime.currentLocationIndex >= this.locations.length) {
+      return null;
+    }
+    
+    const location = this.locations[this.runtime.currentLocationIndex];
+    
+    // Skip disabled or completed locations
+    if ((location.disabled && this.settings.skipDisabled) || location.completed) {
+      this.runtime.currentLocationIndex++;
+      return this.getCurrentLocation();
+    }
+    
+    return location;
+  },
+  
+  // Check if all quests are completed
+  checkAllQuestsCompleted: function() {
+    return this.locations.every(loc => loc.completed || (loc.disabled && this.settings.skipDisabled));
+  },
+  
+  // Press a key (X for interaction, etc.)
+  pressKey: function(key) {
+    // Simulate key press using jQuery
+    const e = jQuery.Event("keydown");
+    e.which = key.charCodeAt(0);
+    e.keyCode = key.charCodeAt(0);
+    $(document).trigger(e);
+    
+    // Also try direct GAME interaction if available
+    if (key.toLowerCase() === "x" && typeof GAME.parseInput === "function") {
+      GAME.parseInput("x");
+    }
+  },
+  
+  // Reset progress for all quests
+  resetAllProgress: function() {
+    this.locations.forEach(location => {
+      location.completed = false;
+    });
+    
+    this.runtime.currentLocationIndex = 0;
+    this.runtime.currentState = QUEST_FLOW_STATES.IDLE;
+    this.runtime.questType = null;
+    this.runtime.questCount = 0;
+    this.runtime.questProgress = 0;
+    this.runtime.failedAttempts = 0;
+    
+    this.updateUI();
+  },
+  
+  // Start the daily quests automation
+  start: function() {
+    if (this.settings.active) return;
+    
+    this.settings.active = true;
+    this.log("Starting daily quests automation");
+    
+    // Initialize state
+    this.runtime.currentState = QUEST_FLOW_STATES.IDLE;
+    
+    // Start the main loop
+    this.mainLoop();
+  },
+  
+  // Stop the daily quests automation
+  stop: function() {
+    if (!this.settings.active) return;
+    
+    this.settings.active = false;
+    this.log("Stopping daily quests automation");
+    
+    // Clear any timeouts or intervals
+    this.clearTimeouts();
+    
+    // Stop any active features
+    if (RESP && !RESP.stop) {
+      RESP.stop = true;
+      $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
+    }
+    
+    if (PVP && !PVP.stop) {
+      PVP.stop = true;
+      $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
+    }
+    
+    if (LPVM && !LPVM.Stop) {
+      LPVM.Stop = true;
+      $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
+    }
+    
+    if (RES && !RES.stop) {
+      RES.stop = true;
+      $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
+    }
+  },
+  
+  // Clear all timeouts and intervals
+  clearTimeouts: function() {
+    if (this.runtime.timeoutId) {
+      clearTimeout(this.runtime.timeoutId);
+      this.runtime.timeoutId = null;
+    }
+    
+    if (this.runtime.intervalId) {
+      clearInterval(this.runtime.intervalId);
+      this.runtime.intervalId = null;
+    }
+  },
+  
+  // Update the UI with current state
+  updateUI: function() {
+    if (typeof window.updateDailyQuestsUI === "function") {
+      window.updateDailyQuestsUI();
+    }
+    
+    // Update status message based on current state
+    if (typeof window.setStatusMessage === "function") {
+      const location = this.getCurrentLocation();
+      const locationName = location ? location.name : "Unknown";
+      
+      let statusMessage = "";
+      switch (this.runtime.currentState) {
+        case QUEST_FLOW_STATES.IDLE:
+          statusMessage = "Ready to start";
+          break;
+        case QUEST_FLOW_STATES.TELEPORTING:
+          statusMessage = `Teleporting to ${locationName}`;
+          break;
+        case QUEST_FLOW_STATES.MOVING_TO_START:
+          statusMessage = `Moving to quest giver in ${locationName}`;
+          break;
+        case QUEST_FLOW_STATES.INTERACTING_START:
+          statusMessage = `Starting quest in ${locationName}`;
+          break;
+        case QUEST_FLOW_STATES.DETECTING_QUEST:
+          statusMessage = `Detecting quest type in ${locationName}`;
+          break;
+        case QUEST_FLOW_STATES.EXECUTING_QUEST:
+          statusMessage = `Executing ${this.runtime.questType} quest: ${this.runtime.questProgress}/${this.runtime.questCount}`;
+          break;
+        case QUEST_FLOW_STATES.MOVING_TO_COMPLETE:
+          statusMessage = `Returning to quest giver in ${locationName}`;
+          break;
+        case QUEST_FLOW_STATES.INTERACTING_COMPLETE:
+          statusMessage = `Completing quest in ${locationName}`;
+          break;
+        default:
+          statusMessage = `Processing ${locationName}`;
+      }
+      
+      window.setStatusMessage(statusMessage);
+    }
+  },
+  
+  // Log a message
+  log: function(message) {
+    console.log(`[DAILY QUESTS] ${message}`);
+    
+    // Update UI status message
+    if (typeof window.setStatusMessage === "function") {
+      window.setStatusMessage(message);
+    }
+    
+    // Also use GAME.komunikat if available
+    if (typeof GAME !== "undefined" && typeof GAME.komunikat === "function") {
+      GAME.komunikat(`[DAILY QUESTS] ${message}`);
+    }
+  }
+};
+
+// Make DAILY_QUESTS available globally
+if (typeof window !== 'undefined') {
+  window.DAILY_QUESTS = DAILY_QUESTS;
+  console.log("[DAILY QUESTS] Manager loaded");
+}
