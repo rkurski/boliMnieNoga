@@ -1,3 +1,76 @@
+/**
+ * Daily Quests Manager - Fixed Version
+ * 
+ * This file contains the core logic for the Daily Quests Manager feature.
+ * It handles quest detection, execution, and state management.
+ * 
+ * The UI elements and event handlers are defined in uncodedeeee.js.
+ * The quest locations are defined in daily_quests_locations.js.
+ */
+
+// Define UI update functions first to ensure they're available globally
+// These functions will be called by the DAILY_QUESTS object
+window.updateDailyQuestsUI = function() {
+  window.updateQuestsList();
+  window.updateProgressCounter();
+};
+
+window.updateQuestsList = function() {
+  const $list = $('#dq_locations_list');
+  $list.empty();
+  
+  if (!window.DAILY_QUESTS || !window.DAILY_QUESTS.locations) return;
+  
+  window.DAILY_QUESTS.locations.forEach((location, index) => {
+    const $location = $('<div class="dq_location"></div>');
+    $location.data('index', index);
+    
+    // Add toggle checkbox
+    const $toggle = $('<input type="checkbox" class="dq_location_toggle">');
+    $toggle.prop('checked', !location.disabled);
+    $location.append($toggle);
+    
+    // Add location name
+    const $name = $('<div class="dq_location_name"></div>').text(location.name);
+    if (location.completed) {
+      $name.addClass('completed');
+    }
+    if (window.DAILY_QUESTS.runtime.currentLocationIndex === index && window.DAILY_QUESTS.settings.active) {
+      $location.addClass('active');
+    }
+    $location.append($name);
+    
+    // Add status indicator
+    const $status = $('<div class="dq_location_status"></div>');
+    if (location.completed) {
+      $status.text('✓');
+      $status.css('color', 'green');
+    } else if (location.disabled) {
+      $status.text('✗');
+      $status.css('color', 'red');
+    } else {
+      $status.text('○');
+      $status.css('color', 'white');
+    }
+    $location.append($status);
+    
+    $list.append($location);
+  });
+};
+
+window.updateProgressCounter = function() {
+  if (!window.DAILY_QUESTS || !window.DAILY_QUESTS.locations) return;
+  
+  const total = window.DAILY_QUESTS.locations.length;
+  const completed = window.DAILY_QUESTS.locations.filter(loc => loc.completed).length;
+  $('#dq_progress_count').text(completed + '/' + total);
+};
+
+window.setStatusMessage = function(message) {
+  $('#dq_status_message').text(message);
+};
+
+// Define constants
 const QUEST_FLOW_STATES = {
   IDLE: "idle",
   TELEPORTING: "teleporting",
@@ -51,6 +124,7 @@ const DAILY_QUESTS = {
     currentPath: []
   },
   
+  // Initialization
   initialize: function(locations) {
     this.locations = locations.map(loc => ({
       ...loc,
@@ -58,6 +132,17 @@ const DAILY_QUESTS = {
       completed: false
     }));
     this.log("Daily Quests Manager initialized with " + this.locations.length + " locations");
+    
+    // Set up event handlers for location toggles
+    $(document).on('change', '.dq_location_toggle', function() {
+      const locationIndex = $(this).closest('.dq_location').data('index');
+      DAILY_QUESTS.locations[locationIndex].disabled = !this.checked;
+      window.updateQuestsList();
+      window.updateProgressCounter();
+    });
+    
+    // Initialize UI
+    window.updateDailyQuestsUI();
   },
   
   // Main execution loop
@@ -70,7 +155,7 @@ const DAILY_QUESTS = {
     
     // Check if all quests are completed
     if (this.checkAllQuestsCompleted()) {
-      this.log("Ukończono wszystkie misje dzienne!");
+      this.log("All quests completed!");
       this.stop();
       return;
     }
@@ -215,19 +300,15 @@ const DAILY_QUESTS = {
     
     // Use matrix pathfinding
     if (!this.createMatrix()) {
-      this.log("Failed to create navigation matrix");
-      this.runtime.isMoving = false;
-      this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
-      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      this.log("Failed to create navigation matrix, using direct movement");
+      this.useDirectMovement(coords);
       return;
     }
     
     // Find path to target
     if (!this.findPath(coords.x, coords.y)) {
-      this.log("No path found to target coordinates");
-      this.runtime.isMoving = false;
-      this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
-      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      this.log("No path found to target coordinates, using direct movement");
+      this.useDirectMovement(coords);
       return;
     }
     
@@ -237,90 +318,136 @@ const DAILY_QUESTS = {
   
   // Create matrix from game map data for pathfinding
   createMatrix: function() {
-    this.runtime.matrix = [];
-    const mapData = GAME.mapcell;
-    
-    if (!mapData) {
-      this.log("Map data not available");
-      return false;
-    }
-    
-    const maxY = parseInt(GAME.map.max_y);
-    const maxX = parseInt(GAME.map.max_x);
-    
-    for (let i = 0; i < maxY; i++) {
-      this.runtime.matrix[i] = [];
-      for (let j = 0; j < maxX; j++) {
-        const cellKey = parseInt(j + 1) + '_' + parseInt(i + 1);
-        if (mapData[cellKey] && mapData[cellKey].m == 1) {
-          // This is a blocker/wall
-          this.runtime.matrix[i][j] = 1;
-        } else {
-          // This is a walkable cell
-          this.runtime.matrix[i][j] = 0;
+    try {
+      this.runtime.matrix = [];
+      const mapData = GAME.mapcell;
+      
+      if (!mapData) {
+        this.log("Map data not available");
+        return false;
+      }
+      
+      // Get map dimensions
+      const maxY = parseInt(GAME.map.max_y) || 50;
+      const maxX = parseInt(GAME.map.max_x) || 50;
+      
+      // Debug map dimensions
+      this.log(`Map dimensions: ${maxX}x${maxY}`);
+      
+      // Initialize matrix with all walkable cells
+      for (let y = 0; y < maxY; y++) {
+        this.runtime.matrix[y] = [];
+        for (let x = 0; x < maxX; x++) {
+          this.runtime.matrix[y][x] = 0; // Default to walkable
         }
       }
+      
+      // Mark blockers/walls
+      for (const key in mapData) {
+        if (mapData.hasOwnProperty(key)) {
+          const cell = mapData[key];
+          if (cell && cell.m === 1) {
+            // This is a blocker/wall
+            // Parse coordinates from key (format: "x_y")
+            const [x, y] = key.split('_').map(coord => parseInt(coord) - 1); // Convert to 0-based
+            
+            // Ensure coordinates are valid
+            if (x >= 0 && x < maxX && y >= 0 && y < maxY) {
+              this.runtime.matrix[y][x] = 1; // Mark as blocker
+            }
+          }
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      this.log(`Error creating matrix: ${error.message}`);
+      return false;
     }
-    return true;
   },
   
   // Find path to target using matrix pathfinding
   findPath: function(targetX, targetY) {
-    // Convert to 0-based coordinates for the matrix
-    const startX = GAME.char_data.x - 1;
-    const startY = GAME.char_data.y - 1;
-    const endX = targetX - 1;
-    const endY = targetY - 1;
-    
-    // Use pathfinding to find a path
-    this.runtime.currentPath = [];
-    
-    // Simple BFS pathfinding implementation
-    const queue = [[startX, startY]];
-    const visited = {};
-    const parent = {};
-    visited[`${startX}_${startY}`] = true;
-    
-    while (queue.length > 0) {
-      const [x, y] = queue.shift();
+    try {
+      // Convert to 0-based coordinates for the matrix
+      const startX = GAME.char_data.x - 1;
+      const startY = GAME.char_data.y - 1;
+      const endX = targetX - 1;
+      const endY = targetY - 1;
       
-      // Check if we've reached the target
-      if (x === endX && y === endY) {
-        // Reconstruct the path
-        let current = `${endX}_${endY}`;
-        while (current !== `${startX}_${startY}`) {
-          const [cx, cy] = current.split('_').map(Number);
-          this.runtime.currentPath.unshift([cx, cy]);
-          current = parent[current];
-        }
-        return true;
+      // Debug coordinates
+      this.log(`Finding path from (${startX},${startY}) to (${endX},${endY})`);
+      
+      // Check if coordinates are valid
+      if (startX < 0 || startY < 0 || endX < 0 || endY < 0 ||
+          startX >= this.runtime.matrix[0].length || startY >= this.runtime.matrix.length ||
+          endX >= this.runtime.matrix[0].length || endY >= this.runtime.matrix.length) {
+        this.log("Invalid coordinates for pathfinding");
+        return false;
       }
       
-      // Check all 8 directions
-      const directions = [
-        [0, -1], [1, -1], [1, 0], [1, 1], 
-        [0, 1], [-1, 1], [-1, 0], [-1, -1]
-      ];
+      // Check if target is a blocker
+      if (this.runtime.matrix[endY][endX] === 1) {
+        this.log("Target is a blocker, cannot find path");
+        return false;
+      }
       
-      for (const [dx, dy] of directions) {
-        const nx = x + dx;
-        const ny = y + dy;
+      // Use pathfinding to find a path
+      this.runtime.currentPath = [];
+      
+      // Simple BFS pathfinding implementation
+      const queue = [[startX, startY]];
+      const visited = {};
+      const parent = {};
+      visited[`${startX}_${startY}`] = true;
+      
+      while (queue.length > 0) {
+        const [x, y] = queue.shift();
         
-        // Check if the new position is valid
-        if (nx >= 0 && nx < this.runtime.matrix[0].length && 
-            ny >= 0 && ny < this.runtime.matrix.length && 
-            this.runtime.matrix[ny][nx] === 0 && 
-            !visited[`${nx}_${ny}`]) {
+        // Check if we've reached the target
+        if (x === endX && y === endY) {
+          // Reconstruct the path
+          let current = `${endX}_${endY}`;
+          while (current !== `${startX}_${startY}`) {
+            const [cx, cy] = current.split('_').map(Number);
+            this.runtime.currentPath.unshift([cx, cy]);
+            current = parent[current];
+          }
           
-          queue.push([nx, ny]);
-          visited[`${nx}_${ny}`] = true;
-          parent[`${nx}_${ny}`] = `${x}_${y}`;
+          this.log(`Path found with ${this.runtime.currentPath.length} steps`);
+          return true;
+        }
+        
+        // Check all 8 directions
+        const directions = [
+          [0, -1], [1, -1], [1, 0], [1, 1], 
+          [0, 1], [-1, 1], [-1, 0], [-1, -1]
+        ];
+        
+        for (const [dx, dy] of directions) {
+          const nx = x + dx;
+          const ny = y + dy;
+          
+          // Check if the new position is valid
+          if (nx >= 0 && nx < this.runtime.matrix[0].length && 
+              ny >= 0 && ny < this.runtime.matrix.length && 
+              this.runtime.matrix[ny][nx] === 0 && 
+              !visited[`${nx}_${ny}`]) {
+            
+            queue.push([nx, ny]);
+            visited[`${nx}_${ny}`] = true;
+            parent[`${nx}_${ny}`] = `${x}_${y}`;
+          }
         }
       }
+      
+      // No path found
+      this.log("No path found using BFS");
+      return false;
+    } catch (error) {
+      this.log(`Error finding path: ${error.message}`);
+      return false;
     }
-    
-    // No path found
-    return false;
   },
   
   // Move along the calculated path
@@ -399,25 +526,106 @@ const DAILY_QUESTS = {
         }
       }, 200);
     } else {
-      // If we can't determine a direction, try to recalculate the path
-      this.log("Recalculating path...");
-      
-      const targetCoords = {
+      // If we can't determine a direction, try direct movement
+      this.log("Could not determine direction, using direct movement");
+      this.useDirectMovement({
         x: this.runtime.currentPath[this.runtime.currentPath.length - 1][0] + 1,
         y: this.runtime.currentPath[this.runtime.currentPath.length - 1][1] + 1
-      };
-      
-      if (this.findPath(targetCoords.x, targetCoords.y)) {
-        this.runtime.timeoutId = setTimeout(() => {
-          this.moveAlongPath();
-        }, 100);
+      });
+    }
+  },
+  
+  // Use direct movement as fallback
+  useDirectMovement: function(coords) {
+    this.log(`Using direct movement to coordinates: ${coords.x}, ${coords.y}`);
+    
+    // Calculate direction to target
+    const dx = coords.x - GAME.char_data.x;
+    const dy = coords.y - GAME.char_data.y;
+    
+    // Determine primary direction
+    let direction = 0;
+    
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // Move horizontally first
+      if (dx > 0) {
+        direction = 7; // Right
       } else {
-        this.log("Failed to recalculate path");
-        this.runtime.isMoving = false;
-        this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
-        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+        direction = 8; // Left
+      }
+    } else {
+      // Move vertically first
+      if (dy > 0) {
+        direction = 1; // Down
+      } else {
+        direction = 2; // Up
       }
     }
+    
+    // Send movement command
+    GAME.socket.emit('ga', {
+      a: 4,
+      dir: direction,
+      vo: (GAME.map_options ? GAME.map_options.vo : undefined)
+    });
+    
+    // Check if we've reached the target
+    this.runtime.intervalId = setInterval(() => {
+      if (!this.settings.active) {
+        clearInterval(this.runtime.intervalId);
+        this.runtime.intervalId = null;
+        this.runtime.isMoving = false;
+        return;
+      }
+      
+      // Check if we've reached the target
+      if (GAME.char_data.x === coords.x && GAME.char_data.y === coords.y) {
+        clearInterval(this.runtime.intervalId);
+        this.runtime.intervalId = null;
+        this.runtime.isMoving = false;
+        
+        // Update state based on current state
+        if (this.runtime.currentState === QUEST_FLOW_STATES.MOVING_TO_START) {
+          this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_START;
+        } else if (this.runtime.currentState === QUEST_FLOW_STATES.MOVING_TO_COMPLETE) {
+          this.runtime.currentState = QUEST_FLOW_STATES.INTERACTING_COMPLETE;
+        }
+        
+        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+        return;
+      }
+      
+      // Continue moving
+      const newDx = coords.x - GAME.char_data.x;
+      const newDy = coords.y - GAME.char_data.y;
+      
+      // Determine new direction
+      let newDirection = 0;
+      
+      if (Math.abs(newDx) > Math.abs(newDy)) {
+        // Move horizontally
+        if (newDx > 0) {
+          newDirection = 7; // Right
+        } else if (newDx < 0) {
+          newDirection = 8; // Left
+        }
+      } else {
+        // Move vertically
+        if (newDy > 0) {
+          newDirection = 1; // Down
+        } else if (newDy < 0) {
+          newDirection = 2; // Up
+        }
+      }
+      
+      if (newDirection !== 0) {
+        GAME.socket.emit('ga', {
+          a: 4,
+          dir: newDirection,
+          vo: (GAME.map_options ? GAME.map_options.vo : undefined)
+        });
+      }
+    }, 300);
   },
   
   // Interact with NPC (press X)
@@ -665,7 +873,7 @@ const DAILY_QUESTS = {
     
     // Configure RESP settings
     RESP.stop = true;
-    RESP.code = this.settings.useCodes;
+    RESP.code = false;
     RESP.checkSSJ = this.settings.useSSJ;
     RESP.multifight = this.settings.useMultifight;
     
@@ -1159,8 +1367,54 @@ const DAILY_QUESTS = {
   }
 };
 
+// Initialize event handlers for Daily Quests panel
+$(document).ready(function() {
+  // Add click handler for main Daily Quests button
+  $('#main_Panel .gh_daily_quests').click(function() {
+    if ($(".gh_daily_quests .gh_status").hasClass("red")) {
+      $(".gh_daily_quests .gh_status").removeClass("red").addClass("green").html("On");
+      $("#daily_quests_Panel").show();
+    } else {
+      $(".gh_daily_quests .gh_status").removeClass("green").addClass("red").html("Off");
+      $("#daily_quests_Panel").hide();
+      if (window.DAILY_QUESTS) {
+        window.DAILY_QUESTS.stop();
+      }
+      $(".dq_start_stop .dq_status").removeClass("green").addClass("red").html("Off");
+    }
+  });
+
+  // Add click handlers for panel buttons
+  $('#daily_quests_Panel .dq_start_stop').click(function() {
+    if ($(".dq_start_stop .dq_status").hasClass("red")) {
+      $(".dq_start_stop .dq_status").removeClass("red").addClass("green").html("On");
+      if (window.DAILY_QUESTS) {
+        window.DAILY_QUESTS.start();
+      }
+    } else {
+      $(".dq_start_stop .dq_status").removeClass("green").addClass("red").html("Off");
+      if (window.DAILY_QUESTS) {
+        window.DAILY_QUESTS.stop();
+      }
+    }
+  });
+
+  $('#daily_quests_Panel .dq_reset').click(function() {
+    if (confirm("Are you sure you want to reset all quest progress?")) {
+      if (window.DAILY_QUESTS) {
+        window.DAILY_QUESTS.resetAllProgress();
+      }
+    }
+  });
+  
+  // Initialize DAILY_QUESTS with locations if available
+  if (typeof window.DAILY_QUESTS_LOCATIONS !== 'undefined' && window.DAILY_QUESTS_LOCATIONS.length > 0) {
+    window.DAILY_QUESTS = DAILY_QUESTS;
+    window.DAILY_QUESTS.initialize(window.DAILY_QUESTS_LOCATIONS);
+  } else {
+    console.error("[DAILY QUESTS] Locations not found. Make sure daily_quests_locations.js is loaded before daily_quests_manager.js");
+  }
+});
+
 // Make DAILY_QUESTS available globally
-if (typeof window !== 'undefined') {
-  window.DAILY_QUESTS = DAILY_QUESTS;
-  console.log("[DAILY QUESTS] Manager loaded");
-}
+window.DAILY_QUESTS = DAILY_QUESTS;
