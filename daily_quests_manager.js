@@ -6,10 +6,13 @@
  * 
  * The UI elements and event handlers are defined in uncodedeeee.js.
  * The quest locations are defined in daily_quests_locations.js.
+ * 
+ * FIXES:
+ * - Uses questProceed() for NPC interaction with proper looping
+ * - Checks for RESP/PVP/LPVM/RES existence before stopping them
  */
 
 // Define UI update functions first to ensure they're available globally
-// These functions will be called by the DAILY_QUESTS object
 window.updateDailyQuestsUI = function() {
   window.updateQuestsList();
   window.updateProgressCounter();
@@ -105,7 +108,9 @@ const DAILY_QUESTS = {
     useCodes: false,
     useMultifight: true,
     maxFailedAttempts: 3,
-    waitBetweenQuests: 2000
+    waitBetweenQuests: 2000,
+    maxInteractionAttempts: 10, // Maximum number of interaction attempts before giving up
+    interactionInterval: 1000   // Time between interaction attempts in ms
   },
   runtime: {
     currentLocationIndex: 0,
@@ -114,14 +119,17 @@ const DAILY_QUESTS = {
     questCount: 0,
     questProgress: 0,
     failedAttempts: 0,
+    interactionAttempts: 0,
     isProcessing: false,
     isTeleporting: false,
     isMoving: false,
+    isInteracting: false,
     lastActionTime: 0,
     timeoutId: null,
     intervalId: null,
     matrix: [],
-    currentPath: []
+    currentPath: [],
+    lastQuestState: null // To track quest state changes
   },
   
   // Initialization
@@ -628,30 +636,155 @@ const DAILY_QUESTS = {
     }, 300);
   },
   
-  // Interact with NPC (press X)
+  // Interact with NPC using questProceed() function
   interactWithNPC: function(interactionType) {
+    if (this.runtime.isInteracting) return;
+    
+    this.runtime.isInteracting = true;
     this.log(`Interacting with NPC (${interactionType})`);
     
-    // Press X key to interact
-    this.pressKey("x");
+    // Reset interaction attempts counter
+    this.runtime.interactionAttempts = 0;
     
-    // Wait for interaction to complete
-    this.runtime.timeoutId = setTimeout(() => {
-      if (interactionType === "start") {
-        this.runtime.currentState = QUEST_FLOW_STATES.DETECTING_QUEST;
-      } else if (interactionType === "complete") {
-        // Check if there's a "finish_quest" button
-        const finishButton = document.querySelector('button[data-option="finish_quest"]');
-        if (finishButton) {
-          finishButton.click();
-          this.log("Clicked finish quest button");
-        }
-        
-        this.runtime.currentState = QUEST_FLOW_STATES.COMPLETED;
+    // Store current quest state to detect changes
+    this.captureQuestState();
+    
+    // Start interaction loop
+    this.interactionLoop(interactionType);
+  },
+  
+  // Capture current quest state for comparison
+  captureQuestState: function() {
+    // Store quest window state
+    const questWindow = document.querySelector('#quest_con');
+    if (questWindow) {
+      // Get quest requirements text if available
+      const requirementsDiv = questWindow.querySelector('.quest_desc div');
+      const requirementsText = requirementsDiv ? requirementsDiv.textContent : '';
+      
+      // Get quest warunek data if available
+      const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+      const count = questWarunek ? questWarunek.getAttribute('data-count') : null;
+      const max = questWarunek ? questWarunek.getAttribute('data-max') : null;
+      
+      // Get finish button state
+      const hasFinishButton = document.querySelector('button[data-option="finish_quest"]') !== null;
+      
+      // Store state
+      this.runtime.lastQuestState = {
+        questWindowVisible: true,
+        requirementsText: requirementsText,
+        count: count,
+        max: max,
+        hasFinishButton: hasFinishButton
+      };
+    } else {
+      this.runtime.lastQuestState = {
+        questWindowVisible: false
+      };
+    }
+  },
+  
+  // Check if quest state has changed
+  hasQuestStateChanged: function() {
+    if (!this.runtime.lastQuestState) return true;
+    
+    const questWindow = document.querySelector('#quest_con');
+    
+    // Check if quest window visibility changed
+    const questWindowVisible = questWindow !== null;
+    if (questWindowVisible !== this.runtime.lastQuestState.questWindowVisible) {
+      return true;
+    }
+    
+    // If quest window is visible, check for content changes
+    if (questWindowVisible) {
+      // Check for finish button appearance/disappearance
+      const hasFinishButton = document.querySelector('button[data-option="finish_quest"]') !== null;
+      if (hasFinishButton !== this.runtime.lastQuestState.hasFinishButton) {
+        return true;
       }
       
-      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 1000);
-    }, 1500);
+      // Check for quest warunek changes
+      const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+      const count = questWarunek ? questWarunek.getAttribute('data-count') : null;
+      const max = questWarunek ? questWarunek.getAttribute('data-max') : null;
+      
+      if (count !== this.runtime.lastQuestState.count || max !== this.runtime.lastQuestState.max) {
+        return true;
+      }
+      
+      // Check for requirements text changes
+      const requirementsDiv = questWindow.querySelector('.quest_desc div');
+      const requirementsText = requirementsDiv ? requirementsDiv.textContent : '';
+      
+      if (requirementsText !== this.runtime.lastQuestState.requirementsText) {
+        return true;
+      }
+    }
+    
+    return false;
+  },
+  
+  // Loop interaction until quest state changes or max attempts reached
+  interactionLoop: function(interactionType) {
+    // Check if we should stop
+    if (!this.settings.active || this.runtime.interactionAttempts >= this.settings.maxInteractionAttempts) {
+      this.log(`Interaction ${interactionType} ${this.runtime.interactionAttempts >= this.settings.maxInteractionAttempts ? 'reached max attempts' : 'stopped'}`);
+      this.runtime.isInteracting = false;
+      
+      // If we've reached max attempts, consider it a failure
+      if (this.runtime.interactionAttempts >= this.settings.maxInteractionAttempts) {
+        this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+      } else {
+        // Otherwise, move to the next state based on interaction type
+        if (interactionType === "start") {
+          this.runtime.currentState = QUEST_FLOW_STATES.DETECTING_QUEST;
+        } else if (interactionType === "complete") {
+          this.runtime.currentState = QUEST_FLOW_STATES.COMPLETED;
+        }
+      }
+      
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      return;
+    }
+    
+    // Increment attempts counter
+    this.runtime.interactionAttempts++;
+    
+    // Call questProceed() function from script1-2.js
+    if (typeof window.kwsv3 !== 'undefined' && typeof window.kwsv3.questProceed === 'function') {
+      this.log(`Using kwsv3.questProceed() (attempt ${this.runtime.interactionAttempts})`);
+      window.kwsv3.questProceed();
+    } else {
+      this.log(`Using fallback interaction method (attempt ${this.runtime.interactionAttempts})`);
+      // Fallback to direct GAME interaction if questProceed is not available
+      if (typeof GAME.parseInput === "function") {
+        GAME.parseInput("x");
+      }
+    }
+    
+    // Wait for interaction to complete and check for state changes
+    this.runtime.timeoutId = setTimeout(() => {
+      // Check if quest state has changed
+      if (this.hasQuestStateChanged()) {
+        this.log(`Quest state changed after interaction ${interactionType}`);
+        this.runtime.isInteracting = false;
+        
+        // Update state based on interaction type
+        if (interactionType === "start") {
+          this.runtime.currentState = QUEST_FLOW_STATES.DETECTING_QUEST;
+        } else if (interactionType === "complete") {
+          this.runtime.currentState = QUEST_FLOW_STATES.COMPLETED;
+        }
+        
+        this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+      } else {
+        // No change yet, continue interaction loop
+        this.log(`No quest state change yet, continuing interaction ${interactionType}`);
+        this.interactionLoop(interactionType);
+      }
+    }, this.settings.interactionInterval);
   },
   
   // Detect quest type from dialog text or quest window
@@ -806,274 +939,306 @@ const DAILY_QUESTS = {
   executeResourcesQuest: function() {
     this.log(`Starting resource collection: ${this.runtime.questCount} resources needed`);
     
-    // Check if RES is already active
-    if (RES && !RES.stop) {
-      RES.stop = true;
+    // Check if RES is already active and defined
+    if (typeof window.RES !== 'undefined' && window.RES && !window.RES.stop) {
+      window.RES.stop = true;
       $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
     }
     
-    // Start RES
-    RES.stop = false;
-    RES.action();
-    $(".res_res .res_status").removeClass("red").addClass("green").html("On");
-    
-    // Monitor collection progress
-    let initialCollected = RES.collected || 0;
-    let checkInterval = 2000;
-    
-    const checkCollectionProgress = () => {
-      if (!this.settings.active) {
-        if (RES && !RES.stop) {
-          RES.stop = true;
-          $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
-        }
-        return;
-      }
+    // Start RES if it exists
+    if (typeof window.RES !== 'undefined' && window.RES) {
+      window.RES.stop = false;
+      window.RES.action();
+      $(".res_res .res_status").removeClass("red").addClass("green").html("On");
       
-      // Check if quest window is still open
-      const questWindow = document.querySelector('#quest_con');
-      if (questWindow) {
-        const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
-        if (questWarunek) {
-          const count = parseInt(questWarunek.getAttribute('data-count') || '0');
-          const max = parseInt(questWarunek.getAttribute('data-max') || '0');
-          
-          this.runtime.questProgress = count;
-          this.log(`Resource collection progress: ${count}/${max}`);
-          
-          if (count >= max) {
-            // Stop RES
-            RES.stop = true;
+      // Monitor collection progress
+      let checkInterval = 2000;
+      
+      const checkCollectionProgress = () => {
+        if (!this.settings.active) {
+          if (typeof window.RES !== 'undefined' && window.RES && !window.RES.stop) {
+            window.RES.stop = true;
             $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
+          }
+          return;
+        }
+        
+        // Check if quest window is still open
+        const questWindow = document.querySelector('#quest_con');
+        if (questWindow) {
+          const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+          if (questWarunek) {
+            const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+            const max = parseInt(questWarunek.getAttribute('data-max') || '0');
             
-            // Move to completion
-            this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
-            this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
-            return;
+            this.runtime.questProgress = count;
+            this.log(`Resource collection progress: ${count}/${max}`);
+            
+            if (count >= max) {
+              // Stop RES
+              if (typeof window.RES !== 'undefined' && window.RES) {
+                window.RES.stop = true;
+                $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
+              }
+              
+              // Move to completion
+              this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+              this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+              return;
+            }
           }
         }
-      }
+        
+        // Continue checking
+        this.runtime.timeoutId = setTimeout(checkCollectionProgress, checkInterval);
+      };
       
-      // Continue checking
       this.runtime.timeoutId = setTimeout(checkCollectionProgress, checkInterval);
-    };
-    
-    this.runtime.timeoutId = setTimeout(checkCollectionProgress, checkInterval);
+    } else {
+      this.log("RES feature not available, skipping quest");
+      this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+    }
   },
   
   // Execute a kill mobs quest
   executeMobsQuest: function() {
     this.log(`Starting to kill mobs: ${this.runtime.questCount} mobs needed`);
     GAME.socket.emit('ga', { a: 15, type: 13});
-    // Check if RESP is already active
-    if (RESP && !RESP.stop) {
-      RESP.stop = true;
+    
+    // Check if RESP is already active and defined
+    if (typeof window.RESP !== 'undefined' && window.RESP && !window.RESP.stop) {
+      window.RESP.stop = true;
       $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
     }
     
-    // Configure RESP settings
-    RESP.stop = true;
-    RESP.code = false;
-    RESP.checkSSJ = this.settings.useSSJ;
-    RESP.multifight = this.settings.useMultifight;
-    
-    // Start RESP
-    RESP.stop = false;
-    RESP.action();
-    $(".resp_resp .resp_status").removeClass("red").addClass("green").html("On");
-    
-    // Monitor kill progress
-    let checkInterval = 10000;
-    
-    const checkKillProgress = () => {
-      if (!this.settings.active) {
-        if (RESP && !RESP.stop) {
-          RESP.stop = true;
-          GAME.socket.emit('ga', { a: 16 });
-          $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
-        }
-        return;
-      }
+    // Configure RESP settings if it exists
+    if (typeof window.RESP !== 'undefined' && window.RESP) {
+      window.RESP.stop = true;
+      window.RESP.code = false;
+      window.RESP.checkSSJ = this.settings.useSSJ;
+      window.RESP.multifight = this.settings.useMultifight;
       
-      // Check if quest window is still open
-      const questWindow = document.querySelector('#quest_con');
-      if (questWindow) {
-        const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
-        if (questWarunek) {
-          const count = parseInt(questWarunek.getAttribute('data-count') || '0');
-          const max = parseInt(questWarunek.getAttribute('data-max') || '0');
-          
-          this.runtime.questProgress = count;
-          this.log(`Kills progress: ${count}/${max}`);
-          
-          if (count >= max) {
-            // Stop RESP
-            RESP.stop = true;
+      // Start RESP
+      window.RESP.stop = false;
+      window.RESP.action();
+      $(".resp_resp .resp_status").removeClass("red").addClass("green").html("On");
+      
+      // Monitor kill progress
+      let checkInterval = 10000;
+      
+      const checkKillProgress = () => {
+        if (!this.settings.active) {
+          if (typeof window.RESP !== 'undefined' && window.RESP && !window.RESP.stop) {
+            window.RESP.stop = true;
+            GAME.socket.emit('ga', { a: 16 });
             $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
+          }
+          return;
+        }
+        
+        // Check if quest window is still open
+        const questWindow = document.querySelector('#quest_con');
+        if (questWindow) {
+          const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+          if (questWarunek) {
+            const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+            const max = parseInt(questWarunek.getAttribute('data-max') || '0');
             
-            // Move to completion
-            this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
-            this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
-            return;
+            this.runtime.questProgress = count;
+            this.log(`Kills progress: ${count}/${max}`);
+            
+            if (count >= max) {
+              // Stop RESP
+              if (typeof window.RESP !== 'undefined' && window.RESP) {
+                window.RESP.stop = true;
+                $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
+              }
+              
+              // Move to completion
+              this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+              this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+              return;
+            }
           }
         }
-      }
+        
+        // Continue checking
+        this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
+      };
       
-      // Continue checking
       this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
-    };
-    
-    this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
+    } else {
+      this.log("RESP feature not available, skipping quest");
+      this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+    }
   },
   
   // Execute a kill players quest
   executePlayersQuest: function() {
     this.log(`Starting to kill players: ${this.runtime.questCount} players needed`);
     
-    // Check if PVP is already active
-    if (PVP && !PVP.stop) {
-      PVP.stop = true;
+    // Check if PVP is already active and defined
+    if (typeof window.PVP !== 'undefined' && window.PVP && !window.PVP.stop) {
+      window.PVP.stop = true;
       $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
     }
     
-    // Configure PVP settings
-    PVP.stop = true;
-    PVP.code = false;
-    
-    // Start PVP
-    PVP.stop = false;
-    PVP.action();
-    $(".pvp_pvp .pvp_status").removeClass("red").addClass("green").html("On");
-    
-    // Monitor kill progress
-    let checkInterval = 2000;
-    
-    const checkKillProgress = () => {
-      if (!this.settings.active) {
-        if (PVP && !PVP.stop) {
-          PVP.stop = true;
-          $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
-        }
-        return;
-      }
+    // Configure PVP settings if it exists
+    if (typeof window.PVP !== 'undefined' && window.PVP) {
+      window.PVP.stop = true;
+      window.PVP.code = false;
       
-      // Check if quest window is still open
-      const questWindow = document.querySelector('#quest_con');
-      if (questWindow) {
-        const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
-        if (questWarunek) {
-          const count = parseInt(questWarunek.getAttribute('data-count') || '0');
-          const max = parseInt(questWarunek.getAttribute('data-max') || '0');
-          
-          this.runtime.questProgress = count;
-          this.log(`PVP kills progress: ${count}/${max}`);
-          
-          if (count >= max) {
-            // Stop PVP
-            PVP.stop = true;
+      // Start PVP
+      window.PVP.stop = false;
+      window.PVP.start();
+      $(".pvp_pvp .pvp_status").removeClass("red").addClass("green").html("On");
+      
+      // Monitor kill progress
+      let checkInterval = 2000;
+      
+      const checkKillProgress = () => {
+        if (!this.settings.active) {
+          if (typeof window.PVP !== 'undefined' && window.PVP && !window.PVP.stop) {
+            window.PVP.stop = true;
             $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
+          }
+          return;
+        }
+        
+        // Check if quest window is still open
+        const questWindow = document.querySelector('#quest_con');
+        if (questWindow) {
+          const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+          if (questWarunek) {
+            const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+            const max = parseInt(questWarunek.getAttribute('data-max') || '0');
             
-            // Move to completion
-            this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
-            this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
-            return;
+            this.runtime.questProgress = count;
+            this.log(`PVP kills progress: ${count}/${max}`);
+            
+            if (count >= max) {
+              // Stop PVP
+              if (typeof window.PVP !== 'undefined' && window.PVP) {
+                window.PVP.stop = true;
+                $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
+              }
+              
+              // Move to completion
+              this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+              this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+              return;
+            }
           }
         }
-      }
+        
+        // Continue checking
+        this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
+      };
       
-      // Continue checking
       this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
-    };
-    
-    this.runtime.timeoutId = setTimeout(checkKillProgress, checkInterval);
+    } else {
+      this.log("PVP feature not available, skipping quest");
+      this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+    }
   },
   
   // Execute an LPVM quest
   executeLPVMQuest: function() {
     this.log(`Starting LPVM task: ${this.runtime.questCount} quests needed`);
     
-    // Check if LPVM is already active
-    if (LPVM && !LPVM.Stop) {
-      LPVM.Stop = true;
+    // Check if LPVM is already active and defined
+    if (typeof window.LPVM !== 'undefined' && window.LPVM && !window.LPVM.Stop) {
+      window.LPVM.Stop = true;
       $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
     }
     
-    // Configure LPVM settings based on reborn level
-    LPVM.Stop = true;
-    const reborn = GAME.char_data.reborn;
-    
-    // Reset all LPVM settings
-    LPVM.g = false;
-    LPVM.u = false;
-    LPVM.s = true;
-    LPVM.h = false;
-    LPVM.m = false;
-    
-    // Set appropriate reborn level
-    // if (reborn === 0) {
-    //   $(".lpvm_g .lpvm_status").removeClass("red").addClass("green").html("On");
-    //   LPVM.g = true;
-    // } else if (reborn === 1) {
-    //   $(".lpvm_u .lpvm_status").removeClass("red").addClass("green").html("On");
-    //   LPVM.u = true;
-    // } else if (reborn === 2) {
-    //   $(".lpvm_s .lpvm_status").removeClass("red").addClass("green").html("On");
-    //   LPVM.s = true;
-    // } else if (reborn === 3) {
-    //   $(".lpvm_h .lpvm_status").removeClass("red").addClass("green").html("On");
-    //   LPVM.h = true;
-    // } else if (reborn >= 4) {
-    //   $(".lpvm_m .lpvm_status").removeClass("red").addClass("green").html("On");
-    //   LPVM.m = true;
-    // }
-    
-    // Start LPVM
-    LPVM.Stop = false;
-    LPVM.action();
-    $(".lpvm_lpvm .lpvm_status").removeClass("red").addClass("green").html("On");
-    
-    // Monitor LPVM progress
-    let initialCompleted = parseInt($('.pvm_killed b').text()) || 0;
-    let checkInterval = 5000;
-    
-    const checkLPVMProgress = () => {
-      if (!this.settings.active) {
-        if (LPVM && !LPVM.Stop) {
-          LPVM.Stop = true;
-          $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
-        }
-        return;
-      }
+    // Configure LPVM settings based on reborn level if it exists
+    if (typeof window.LPVM !== 'undefined' && window.LPVM) {
+      window.LPVM.Stop = true;
+      const reborn = GAME.char_data.reborn;
       
-      // Check if quest window is still open
-      const questWindow = document.querySelector('#quest_con');
-      if (questWindow) {
-        const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
-        if (questWarunek) {
-          const count = parseInt(questWarunek.getAttribute('data-count') || '0');
-          const max = parseInt(questWarunek.getAttribute('data-max') || '0');
-          
-          this.runtime.questProgress = count;
-          this.log(`LPVM progress: ${count}/${max}`);
-          
-          if (count >= max) {
-            // Stop LPVM
-            LPVM.Stop = true;
+      // Reset all LPVM settings
+      window.LPVM.g = false;
+      window.LPVM.u = false;
+      window.LPVM.s = true;
+      window.LPVM.h = false;
+      window.LPVM.m = false;
+      
+      // Set appropriate reborn level
+      // if (reborn === 0) {
+      //   $(".lpvm_g .lpvm_status").removeClass("red").addClass("green").html("On");
+      //   window.LPVM.g = true;
+      // } else if (reborn === 1) {
+      //   $(".lpvm_u .lpvm_status").removeClass("red").addClass("green").html("On");
+      //   window.LPVM.u = true;
+      // } else if (reborn === 2) {
+      //   $(".lpvm_s .lpvm_status").removeClass("red").addClass("green").html("On");
+      //   window.LPVM.s = true;
+      // } else if (reborn === 3) {
+      //   $(".lpvm_h .lpvm_status").removeClass("red").addClass("green").html("On");
+      //   window.LPVM.h = true;
+      // } else if (reborn >= 4) {
+      //   $(".lpvm_m .lpvm_status").removeClass("red").addClass("green").html("On");
+      //   window.LPVM.m = true;
+      // }
+      
+      // Start LPVM
+      window.LPVM.Stop = false;
+      window.LPVM.action();
+      $(".lpvm_lpvm .lpvm_status").removeClass("red").addClass("green").html("On");
+      
+      // Monitor LPVM progress
+      let initialCompleted = parseInt($('.pvm_killed b').text()) || 0;
+      let checkInterval = 5000;
+      
+      const checkLPVMProgress = () => {
+        if (!this.settings.active) {
+          if (typeof window.LPVM !== 'undefined' && window.LPVM && !window.LPVM.Stop) {
+            window.LPVM.Stop = true;
             $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
+          }
+          return;
+        }
+        
+        // Check if quest window is still open
+        const questWindow = document.querySelector('#quest_con');
+        if (questWindow) {
+          const questWarunek = questWindow.querySelector('[class^="quest_warunek"]');
+          if (questWarunek) {
+            const count = parseInt(questWarunek.getAttribute('data-count') || '0');
+            const max = parseInt(questWarunek.getAttribute('data-max') || '0');
             
-            // Move to completion
-            this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
-            this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
-            return;
+            this.runtime.questProgress = count;
+            this.log(`LPVM progress: ${count}/${max}`);
+            
+            if (count >= max) {
+              // Stop LPVM
+              if (typeof window.LPVM !== 'undefined' && window.LPVM) {
+                window.LPVM.Stop = true;
+                $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
+              }
+              
+              // Move to completion
+              this.runtime.currentState = QUEST_FLOW_STATES.MOVING_TO_COMPLETE;
+              this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+              return;
+            }
           }
         }
-      }
+        
+        // Continue checking
+        this.runtime.timeoutId = setTimeout(checkLPVMProgress, checkInterval);
+      };
       
-      // Continue checking
       this.runtime.timeoutId = setTimeout(checkLPVMProgress, checkInterval);
-    };
-    
-    this.runtime.timeoutId = setTimeout(checkLPVMProgress, checkInterval);
+    } else {
+      this.log("LPVM feature not available, skipping quest");
+      this.runtime.currentState = QUEST_FLOW_STATES.FAILED;
+      this.runtime.timeoutId = setTimeout(() => this.mainLoop(), 500);
+    }
   },
   
   // Execute an expedition quest
@@ -1217,20 +1382,6 @@ const DAILY_QUESTS = {
     return this.locations.every(loc => loc.completed || (loc.disabled && this.settings.skipDisabled));
   },
   
-  // Press a key (X for interaction, etc.)
-  pressKey: function(key) {
-    // Simulate key press using jQuery
-    const e = jQuery.Event("keydown");
-    e.which = key.charCodeAt(0);
-    e.keyCode = key.charCodeAt(0);
-    $(document).trigger(e);
-    
-    // Also try direct GAME interaction if available
-    if (key.toLowerCase() === "x" && typeof GAME.parseInput === "function") {
-      GAME.parseInput("x");
-    }
-  },
-  
   // Reset progress for all quests
   resetAllProgress: function() {
     this.locations.forEach(location => {
@@ -1271,24 +1422,24 @@ const DAILY_QUESTS = {
     // Clear any timeouts or intervals
     this.clearTimeouts();
     
-    // Stop any active features
-    if (RESP && !RESP.stop) {
-      RESP.stop = true;
+    // Stop any active features - with existence checks
+    if (typeof window.RESP !== 'undefined' && window.RESP && !window.RESP.stop) {
+      window.RESP.stop = true;
       $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
     }
     
-    if (PVP && !PVP.stop) {
-      PVP.stop = true;
+    if (typeof window.PVP !== 'undefined' && window.PVP && !window.PVP.stop) {
+      window.PVP.stop = true;
       $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
     }
     
-    if (LPVM && !LPVM.Stop) {
-      LPVM.Stop = true;
+    if (typeof window.LPVM !== 'undefined' && window.LPVM && !window.LPVM.Stop) {
+      window.LPVM.Stop = true;
       $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
     }
     
-    if (RES && !RES.stop) {
-      RES.stop = true;
+    if (typeof window.RES !== 'undefined' && window.RES && !window.RES.stop) {
+      window.RES.stop = true;
       $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
     }
   },
