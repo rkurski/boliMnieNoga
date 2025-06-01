@@ -1,14 +1,15 @@
 /**
- * Daily Quests Manager - Final Version
+ * Daily Quests Manager - Final Version with LPVM-style Pathfinding
  * 
  * This file contains the core logic for the Daily Quests Manager feature.
  * It handles quest detection, execution, and state management.
  * 
  * FIXES:
- * - Reintroduced matrix pathfinding to avoid blockers
+ * - Implemented LPVM-style matrix pathfinding to properly handle blockers
  * - Embedded direct questProceed logic instead of calling it
  * - Fixed checkbox and disabled locations bug
- * - Simplified state management
+ * - Improved feature access checks for RES, LPVM, etc.
+ * - Added immediate continuation if no quest is found
  */
 
 // Define UI update functions first to ensure they're available globally
@@ -86,6 +87,7 @@ const DAILY_QUESTS = {
   isInteracting: false,
   matrix: [],
   currentPath: [],
+  finder: null,
   
   // Quest type patterns as provided by user
   QUEST_TYPE_PATTERNS: {
@@ -123,6 +125,29 @@ const DAILY_QUESTS = {
         window.updateProgressCounter();
       }
     });
+    
+    // Initialize EasyStar.js pathfinder if not already loaded
+    this.initializePathfinder();
+  },
+  
+  // Initialize EasyStar.js pathfinder
+  initializePathfinder: function() {
+    if (typeof EasyStar === 'undefined') {
+      this.log("Loading EasyStar.js pathfinder...");
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/easystarjs@0.4.3/bin/easystar-0.4.3.min.js';
+      script.onload = () => {
+        this.finder = new EasyStar.js();
+        this.finder.enableDiagonals();
+        this.finder.enableSync();
+        this.log("EasyStar.js pathfinder loaded successfully");
+      };
+      document.head.appendChild(script);
+    } else if (this.finder === null) {
+      this.finder = new EasyStar.js();
+      this.finder.enableDiagonals();
+      this.finder.enableSync();
+    }
   },
   
   // Main execution loop
@@ -243,7 +268,7 @@ const DAILY_QUESTS = {
     this.timeoutId = setTimeout(checkTeleportComplete, 1000);
   },
   
-  // Navigate to coordinates using pathfinding
+  // Navigate to coordinates using LPVM-style pathfinding
   navigateToCoordinates: function(coords) {
     if (this.isMoving) return;
     
@@ -259,25 +284,78 @@ const DAILY_QUESTS = {
       return;
     }
     
-    // Use matrix pathfinding
-    if (!this.createMatrix()) {
-      this.log("Failed to create navigation matrix, using direct movement");
+    // Create matrix for pathfinding (LPVM style)
+    this.createMatrix();
+    
+    // Check if pathfinder is available
+    if (!this.finder) {
+      this.log("Pathfinder not available, using direct movement");
       this.useDirectMovement(coords);
       return;
     }
+    
+    // Set up pathfinder with the matrix
+    this.finder.setGrid(this.matrix);
+    this.finder.setAcceptableTiles([0]); // 0 = walkable in our matrix
     
     // Find path to target
-    if (!this.findPath(coords.x, coords.y)) {
-      this.log("No path found to target coordinates, using direct movement");
+    this.currentPath = [];
+    
+    // Convert to 0-based coordinates for the matrix
+    const startX = GAME.char_data.x - 1;
+    const startY = GAME.char_data.y - 1;
+    const endX = coords.x - 1;
+    const endY = coords.y - 1;
+    
+    // Debug coordinates
+    this.log(`Finding path from (${startX},${startY}) to (${endX},${endY})`);
+    
+    // Check if coordinates are valid
+    if (startX < 0 || startY < 0 || endX < 0 || endY < 0 ||
+        startX >= this.matrix[0].length || startY >= this.matrix.length ||
+        endX >= this.matrix[0].length || endY >= this.matrix.length) {
+      this.log("Invalid coordinates for pathfinding");
       this.useDirectMovement(coords);
       return;
     }
     
-    // Start moving along the path
-    this.moveAlongPath();
+    // Check if target is a blocker
+    if (this.matrix[endY][endX] === 1) {
+      this.log("Target is a blocker, cannot find path");
+      this.useDirectMovement(coords);
+      return;
+    }
+    
+    // Find path using EasyStar.js (LPVM style)
+    let pathFound = false;
+    
+    this.finder.findPath(startX, startY, endX, endY, (path) => {
+      if (path === null) {
+        this.log("No path found using EasyStar.js");
+        this.useDirectMovement(coords);
+      } else {
+        pathFound = true;
+        // Convert path to the format we need
+        if (path[0].x === startX && path[0].y === startY) {
+          path.shift(); // Remove starting position
+        }
+        this.currentPath = path;
+        this.log(`Path found with ${this.currentPath.length} steps`);
+        this.moveAlongPath();
+      }
+    });
+    
+    // Calculate the path
+    this.finder.calculate();
+    
+    // If no path was found (and the callback wasn't called), use direct movement
+    if (!pathFound && this.currentPath.length === 0) {
+      this.log("No path found to target coordinates, using direct movement");
+      this.useDirectMovement(coords);
+    }
   },
   
-  // Create matrix from game map data for pathfinding
+  // Create matrix from game map data for pathfinding (LPVM style)
   createMatrix: function() {
     try {
       this.matrix = [];
@@ -296,26 +374,19 @@ const DAILY_QUESTS = {
       this.log(`Map dimensions: ${maxX}x${maxY}`);
       
       // Initialize matrix with all walkable cells
-      for (let y = 0; y < maxY; y++) {
-        this.matrix[y] = [];
-        for (let x = 0; x < maxX; x++) {
-          this.matrix[y][x] = 0; // Default to walkable
+      for (let i = 0; i < maxY; i++) {
+        this.matrix[i] = [];
+        for (let j = 0; j < maxX; j++) {
+          this.matrix[i][j] = 0; // Default to walkable
         }
       }
       
-      // Mark blockers/walls
-      for (const key in mapData) {
-        if (mapData.hasOwnProperty(key)) {
-          const cell = mapData[key];
-          if (cell && cell.m === 1) {
-            // This is a blocker/wall
-            // Parse coordinates from key (format: "x_y")
-            const [x, y] = key.split('_').map(coord => parseInt(coord) - 1); // Convert to 0-based
-            
-            // Ensure coordinates are valid
-            if (x >= 0 && x < maxX && y >= 0 && y < maxY) {
-              this.matrix[y][x] = 1; // Mark as blocker
-            }
+      // Mark blockers/walls (LPVM style)
+      for (let i = 1; i <= maxY; i++) {
+        for (let j = 1; j <= maxX; j++) {
+          const key = j + '_' + i;
+          if (mapData[key] && mapData[key].m === 1) {
+            this.matrix[i-1][j-1] = 1; // Mark as blocker (1-based to 0-based)
           }
         }
       }
@@ -327,91 +398,7 @@ const DAILY_QUESTS = {
     }
   },
   
-  // Find path to target using matrix pathfinding
-  findPath: function(targetX, targetY) {
-    try {
-      // Convert to 0-based coordinates for the matrix
-      const startX = GAME.char_data.x - 1;
-      const startY = GAME.char_data.y - 1;
-      const endX = targetX - 1;
-      const endY = targetY - 1;
-      
-      // Debug coordinates
-      this.log(`Finding path from (${startX},${startY}) to (${endX},${endY})`);
-      
-      // Check if coordinates are valid
-      if (startX < 0 || startY < 0 || endX < 0 || endY < 0 ||
-          startX >= this.matrix[0].length || startY >= this.matrix.length ||
-          endX >= this.matrix[0].length || endY >= this.matrix.length) {
-        this.log("Invalid coordinates for pathfinding");
-        return false;
-      }
-      
-      // Check if target is a blocker
-      if (this.matrix[endY][endX] === 1) {
-        this.log("Target is a blocker, cannot find path");
-        return false;
-      }
-      
-      // Use pathfinding to find a path
-      this.currentPath = [];
-      
-      // Simple BFS pathfinding implementation
-      const queue = [[startX, startY]];
-      const visited = {};
-      const parent = {};
-      visited[`${startX}_${startY}`] = true;
-      
-      while (queue.length > 0) {
-        const [x, y] = queue.shift();
-        
-        // Check if we've reached the target
-        if (x === endX && y === endY) {
-          // Reconstruct the path
-          let current = `${endX}_${endY}`;
-          while (current !== `${startX}_${startY}`) {
-            const [cx, cy] = current.split('_').map(Number);
-            this.currentPath.unshift([cx, cy]);
-            current = parent[current];
-          }
-          
-          this.log(`Path found with ${this.currentPath.length} steps`);
-          return true;
-        }
-        
-        // Check all 8 directions
-        const directions = [
-          [0, -1], [1, -1], [1, 0], [1, 1], 
-          [0, 1], [-1, 1], [-1, 0], [-1, -1]
-        ];
-        
-        for (const [dx, dy] of directions) {
-          const nx = x + dx;
-          const ny = y + dy;
-          
-          // Check if the new position is valid
-          if (nx >= 0 && nx < this.matrix[0].length && 
-              ny >= 0 && ny < this.matrix.length && 
-              this.matrix[ny][nx] === 0 && 
-              !visited[`${nx}_${ny}`]) {
-            
-            queue.push([nx, ny]);
-            visited[`${nx}_${ny}`] = true;
-            parent[`${nx}_${ny}`] = `${x}_${y}`;
-          }
-        }
-      }
-      
-      // No path found
-      this.log("No path found using BFS");
-      return false;
-    } catch (error) {
-      this.log(`Error finding path: ${error.message}`);
-      return false;
-    }
-  },
-  
-  // Move along the calculated path
+  // Move along the calculated path (LPVM style)
   moveAlongPath: function() {
     if (!this.active || !this.currentPath || this.currentPath.length === 0) {
       this.isMoving = false;
@@ -422,10 +409,10 @@ const DAILY_QUESTS = {
     
     // Get the next step in the path
     const nextStep = this.currentPath[0];
-    const nextX = nextStep[0] + 1; // Convert back to 1-based coordinates
-    const nextY = nextStep[1] + 1;
+    const nextX = nextStep.x + 1; // Convert back to 1-based coordinates
+    const nextY = nextStep.y + 1;
     
-    // Determine direction to move
+    // Determine direction to move (LPVM style)
     let direction = 0;
     const currentX = GAME.char_data.x;
     const currentY = GAME.char_data.y;
@@ -483,8 +470,8 @@ const DAILY_QUESTS = {
       // If we can't determine a direction, try direct movement
       this.log("Could not determine direction, using direct movement");
       this.useDirectMovement({
-        x: this.currentPath[this.currentPath.length - 1][0] + 1,
-        y: this.currentPath[this.currentPath.length - 1][1] + 1
+        x: this.currentPath[this.currentPath.length - 1].x + 1,
+        y: this.currentPath[this.currentPath.length - 1].y + 1
       });
     }
   },
@@ -655,8 +642,20 @@ const DAILY_QUESTS = {
           type: 1,
           id: qb_id
         });
+      } else {
+        // No quest found at this location, continue to next location
+        this.log("No quest found at this location, continuing to next location");
+        this.isInteracting = false;
+        this.currentLocationIndex++;
+        this.currentState = "idle";
+        this.timeoutId = setTimeout(() => this.mainLoop(), 500);
+        return true; // Indicate that we're skipping to next location
       }
+    } else {
+      // No interaction options found, try pressing X key
+      GAME.emitOrder({a:14,type:0});
     }
+    return false; // Indicate normal interaction
   },
   
   // Interact with NPC using direct questProceed implementation
@@ -688,12 +687,15 @@ const DAILY_QUESTS = {
         return;
       }
       
+      // Call directQuestProceed to interact
+      const skipToNext = this.directQuestProceed();
+      if (skipToNext) {
+        clearInterval(interactionInterval);
+        return; // Already handled in directQuestProceed
+      }
+      
       // Check if quest window is open
       const questWindow = document.querySelector('#quest_con');
-      const fieldOptsWindow = document.querySelector('#field_opts_con');
-      
-      // Call directQuestProceed to interact
-      this.directQuestProceed();
       
       // Check if we have a quest with requirements
       if (questWindow) {
@@ -736,7 +738,7 @@ const DAILY_QUESTS = {
       }
       
       // Check if quest is completed (quest window closed after completion)
-      if (!questWindow && !fieldOptsWindow && attempts > 3) {
+      if (!questWindow && attempts > 3) {
         clearInterval(interactionInterval);
         this.isInteracting = false;
         this.currentState = "completed";
@@ -815,8 +817,8 @@ const DAILY_QUESTS = {
   executeResourcesQuest: function(location) {
     this.log(`Starting resource collection`);
     
-    // Check if RES is defined
-    if (typeof window.RES === 'undefined') {
+    // Check if RES is defined and accessible
+    if (typeof window.RES === 'undefined' || !window.RES || typeof window.RES.action !== 'function') {
       this.log("RES feature not available, returning to interaction");
       this.currentState = "interacting";
       this.timeoutId = setTimeout(() => this.mainLoop(), 500);
@@ -833,7 +835,7 @@ const DAILY_QUESTS = {
     
     const checkCollectionProgress = () => {
       if (!this.active) {
-        if (typeof window.RES !== 'undefined') {
+        if (typeof window.RES !== 'undefined' && window.RES) {
           window.RES.stop = true;
           $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
         }
@@ -852,7 +854,7 @@ const DAILY_QUESTS = {
           
           if (count >= max) {
             // Stop RES
-            if (typeof window.RES !== 'undefined') {
+            if (typeof window.RES !== 'undefined' && window.RES) {
               window.RES.stop = true;
               $(".res_res .res_status").removeClass("green").addClass("red").html("Off");
             }
@@ -881,8 +883,8 @@ const DAILY_QUESTS = {
   executeMobsQuest: function(location) {
     this.log(`Starting to kill mobs`);
     
-    // Check if RESP is defined
-    if (typeof window.RESP === 'undefined') {
+    // Check if RESP is defined and accessible
+    if (typeof window.RESP === 'undefined' || !window.RESP || typeof window.RESP.action !== 'function') {
       this.log("RESP feature not available, returning to interaction");
       this.currentState = "interacting";
       this.timeoutId = setTimeout(() => this.mainLoop(), 500);
@@ -891,9 +893,9 @@ const DAILY_QUESTS = {
     
     // Configure RESP settings
     window.RESP.stop = true;
-    window.RESP.code = false;
-    window.RESP.checkSSJ = true;
-    window.RESP.multifight = true;
+    if (typeof window.RESP.code !== 'undefined') window.RESP.code = false;
+    if (typeof window.RESP.checkSSJ !== 'undefined') window.RESP.checkSSJ = true;
+    if (typeof window.RESP.multifight !== 'undefined') window.RESP.multifight = true;
     
     // Start RESP
     window.RESP.stop = false;
@@ -905,7 +907,7 @@ const DAILY_QUESTS = {
     
     const checkKillProgress = () => {
       if (!this.active) {
-        if (typeof window.RESP !== 'undefined') {
+        if (typeof window.RESP !== 'undefined' && window.RESP) {
           window.RESP.stop = true;
           $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
         }
@@ -924,7 +926,7 @@ const DAILY_QUESTS = {
           
           if (count >= max) {
             // Stop RESP
-            if (typeof window.RESP !== 'undefined') {
+            if (typeof window.RESP !== 'undefined' && window.RESP) {
               window.RESP.stop = true;
               $(".resp_resp .resp_status").removeClass("green").addClass("red").html("Off");
             }
@@ -953,8 +955,8 @@ const DAILY_QUESTS = {
   executePlayersQuest: function(location) {
     this.log(`Starting to kill players`);
     
-    // Check if PVP is defined
-    if (typeof window.PVP === 'undefined') {
+    // Check if PVP is defined and accessible
+    if (typeof window.PVP === 'undefined' || !window.PVP || typeof window.PVP.start !== 'function') {
       this.log("PVP feature not available, returning to interaction");
       this.currentState = "interacting";
       this.timeoutId = setTimeout(() => this.mainLoop(), 500);
@@ -963,7 +965,7 @@ const DAILY_QUESTS = {
     
     // Configure PVP settings
     window.PVP.stop = true;
-    window.PVP.code = false;
+    if (typeof window.PVP.code !== 'undefined') window.PVP.code = false;
     
     // Start PVP
     window.PVP.stop = false;
@@ -975,7 +977,7 @@ const DAILY_QUESTS = {
     
     const checkKillProgress = () => {
       if (!this.active) {
-        if (typeof window.PVP !== 'undefined') {
+        if (typeof window.PVP !== 'undefined' && window.PVP) {
           window.PVP.stop = true;
           $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
         }
@@ -994,7 +996,7 @@ const DAILY_QUESTS = {
           
           if (count >= max) {
             // Stop PVP
-            if (typeof window.PVP !== 'undefined') {
+            if (typeof window.PVP !== 'undefined' && window.PVP) {
               window.PVP.stop = true;
               $(".pvp_pvp .pvp_status").removeClass("green").addClass("red").html("Off");
             }
@@ -1023,8 +1025,8 @@ const DAILY_QUESTS = {
   executeLPVMQuest: function(location) {
     this.log(`Starting LPVM task`);
     
-    // Check if LPVM is defined
-    if (typeof window.LPVM === 'undefined') {
+    // Check if LPVM is defined and accessible
+    if (typeof window.LPVM === 'undefined' || !window.LPVM || typeof window.LPVM.action !== 'function') {
       this.log("LPVM feature not available, returning to interaction");
       this.currentState = "interacting";
       this.timeoutId = setTimeout(() => this.mainLoop(), 500);
@@ -1036,26 +1038,26 @@ const DAILY_QUESTS = {
     const reborn = GAME.char_data.reborn;
     
     // Reset all LPVM settings
-    window.LPVM.g = false;
-    window.LPVM.u = false;
-    window.LPVM.s = true;
-    window.LPVM.h = false;
-    window.LPVM.m = false;
+    if (typeof window.LPVM.g !== 'undefined') window.LPVM.g = false;
+    if (typeof window.LPVM.u !== 'undefined') window.LPVM.u = false;
+    if (typeof window.LPVM.s !== 'undefined') window.LPVM.s = true;
+    if (typeof window.LPVM.h !== 'undefined') window.LPVM.h = false;
+    if (typeof window.LPVM.m !== 'undefined') window.LPVM.m = false;
     
     // Set appropriate reborn level
-    // if (reborn === 0) {
+    // if (reborn === 0 && typeof window.LPVM.g !== 'undefined') {
     //   $(".lpvm_g .lpvm_status").removeClass("red").addClass("green").html("On");
     //   window.LPVM.g = true;
-    // } else if (reborn === 1) {
+    // } else if (reborn === 1 && typeof window.LPVM.u !== 'undefined') {
     //   $(".lpvm_u .lpvm_status").removeClass("red").addClass("green").html("On");
     //   window.LPVM.u = true;
-    // } else if (reborn === 2) {
+    // } else if (reborn === 2 && typeof window.LPVM.s !== 'undefined') {
     //   $(".lpvm_s .lpvm_status").removeClass("red").addClass("green").html("On");
     //   window.LPVM.s = true;
-    // } else if (reborn === 3) {
+    // } else if (reborn === 3 && typeof window.LPVM.h !== 'undefined') {
     //   $(".lpvm_h .lpvm_status").removeClass("red").addClass("green").html("On");
     //   window.LPVM.h = true;
-    // } else if (reborn >= 4) {
+    // } else if (reborn >= 4 && typeof window.LPVM.m !== 'undefined') {
     //   $(".lpvm_m .lpvm_status").removeClass("red").addClass("green").html("On");
     //   window.LPVM.m = true;
     // }
@@ -1070,7 +1072,7 @@ const DAILY_QUESTS = {
     
     const checkLPVMProgress = () => {
       if (!this.active) {
-        if (typeof window.LPVM !== 'undefined') {
+        if (typeof window.LPVM !== 'undefined' && window.LPVM) {
           window.LPVM.Stop = true;
           $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
         }
@@ -1089,7 +1091,7 @@ const DAILY_QUESTS = {
           
           if (count >= max) {
             // Stop LPVM
-            if (typeof window.LPVM !== 'undefined') {
+            if (typeof window.LPVM !== 'undefined' && window.LPVM) {
               window.LPVM.Stop = true;
               $(".lpvm_lpvm .lpvm_status").removeClass("green").addClass("red").html("Off");
             }
@@ -1126,13 +1128,15 @@ const DAILY_QUESTS = {
       }
       
       // Configure expedition settings
-      kwsv3.settings.aeCodes = false;
+      if (typeof kwsv3.settings !== 'undefined' && typeof kwsv3.settings.aeCodes !== 'undefined') {
+        kwsv3.settings.aeCodes = false;
+      }
       
       // Start expeditions
       kwsv3.manageAutoExpeditions();
       
       // Monitor expedition progress
-      let checkInterval = 301000; // Expeditions take longer
+      let checkInterval = 10000; // Expeditions take longer
       
       const checkExpeditionProgress = () => {
         if (!this.active) {
@@ -1377,6 +1381,24 @@ const DAILY_QUESTS = {
     if (typeof GAME !== "undefined" && typeof GAME.komunikat === "function") {
       GAME.komunikat(`[DAILY QUESTS] ${message}`);
     }
+  },
+  
+  // Handle socket events
+  handleSockets: function(res) {
+    if (!this.active) return;
+    
+    // Handle movement events
+    if (res.a === 4 && res.char_id === GAME.char_id && this.isMoving) {
+      // Character moved, check if we need to continue path
+      if (this.currentPath && this.currentPath.length > 0) {
+        // Continue moving along path
+      }
+    }
+    
+    // Handle teleport events
+    if (res.a === 12 && "show_map" in res && this.isTeleporting) {
+      // Map loaded after teleport
+    }
   }
 };
 
@@ -1431,3 +1453,12 @@ $(document).ready(function() {
 
 // Make DAILY_QUESTS available globally
 window.DAILY_QUESTS = DAILY_QUESTS;
+
+// Add socket event handler
+if (typeof GAME !== 'undefined' && GAME.socket) {
+  GAME.socket.on('gr', function(msg) {
+    if (window.DAILY_QUESTS) {
+      window.DAILY_QUESTS.handleSockets(msg);
+    }
+  });
+}
