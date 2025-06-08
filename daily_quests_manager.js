@@ -17,7 +17,10 @@ if (typeof DAILY_QUESTS === 'undefined') {
         const $list = $('#dq_locations_list');
         $list.empty();
         
-        if (!DAILY_QUESTS || !DAILY_QUESTS.locations) return;
+        if (!DAILY_QUESTS || !DAILY_QUESTS.locations || !Array.isArray(DAILY_QUESTS.locations)) {
+            console.log("[DAILY QUESTS] No locations to display");
+            return;
+        }
         
         DAILY_QUESTS.locations.forEach((location, index) => {
             const $location = $('<div class="dq_location"></div>');
@@ -57,7 +60,10 @@ if (typeof DAILY_QUESTS === 'undefined') {
     }
 
     function updateProgressCounter() {
-        if (!DAILY_QUESTS || !DAILY_QUESTS.locations) return;
+        if (!DAILY_QUESTS || !DAILY_QUESTS.locations || !Array.isArray(DAILY_QUESTS.locations)) {
+            $('#dq_progress_count').text('0/0');
+            return;
+        }
         
         const total = DAILY_QUESTS.locations.length;
         const completed = DAILY_QUESTS.locations.filter(loc => loc.completed).length;
@@ -119,14 +125,15 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
 
         initializeLocations: function() {
-            if (window.DAILY_QUESTS_LOCATIONS) {
+            if (window.DAILY_QUESTS_LOCATIONS && Array.isArray(window.DAILY_QUESTS_LOCATIONS)) {
                 this.locations = window.DAILY_QUESTS_LOCATIONS.map(loc => ({
                     ...loc,
                     disabled: false,
                     completed: false
                 }));
             } else {
-                console.error("[DAILY QUESTS] Locations not found!");
+                console.error("[DAILY QUESTS] Locations not found or not an array!");
+                this.locations = [];
             }
         },
 
@@ -136,6 +143,11 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
 
         setupEventHandlers: function() {
+            // Remove any existing handlers to prevent duplicates
+            $("body").off("click", ".dq_button.dq_start_stop");
+            $("body").off("click", ".dq_button.dq_reset");
+            $("body").off("change", ".dq_location_toggle");
+            
             // Setup event handlers for the daily quests panel
             $("body").on("click", ".dq_button.dq_start_stop", () => {
                 const isActive = this.toggleActive();
@@ -152,26 +164,27 @@ if (typeof DAILY_QUESTS === 'undefined') {
             
             $("body").on("change", ".dq_location_toggle", function() {
                 const index = $(this).closest(".dq_location").data("index");
-                DAILY_QUESTS.toggleLocationEnabled(index);
+                if (typeof index === 'number' && DAILY_QUESTS && DAILY_QUESTS.toggleLocationEnabled) {
+                    DAILY_QUESTS.toggleLocationEnabled(index);
+                }
             });
             
             // Setup the main panel button handler if not already set
-            if (!$._data($("#main_Panel .gh_daily_quests")[0], "events")) {
-                $("#main_Panel .gh_daily_quests").click(() => {
-                    if ($(".gh_daily_quests .gh_status").hasClass("red")) {
-                        $(".gh_daily_quests .gh_status").removeClass("red").addClass("green").html("On");
-                        $("#daily_quests_Panel").show();
-                        this.initializeUI();
-                    } else {
-                        $(".gh_daily_quests .gh_status").removeClass("green").addClass("red").html("Off");
-                        $("#daily_quests_Panel").hide();
-                        if (this.settings.active) {
-                            $(".dq_button.dq_start_stop b").removeClass("green").addClass("red").html("Off");
-                            this.toggleActive();
-                        }
+            $("#main_Panel .gh_daily_quests").off("click");
+            $("#main_Panel .gh_daily_quests").on("click", () => {
+                if ($(".gh_daily_quests .gh_status").hasClass("red")) {
+                    $(".gh_daily_quests .gh_status").removeClass("red").addClass("green").html("On");
+                    $("#daily_quests_Panel").show();
+                    this.initializeUI();
+                } else {
+                    $(".gh_daily_quests .gh_status").removeClass("green").addClass("red").html("Off");
+                    $("#daily_quests_Panel").hide();
+                    if (this.settings.active) {
+                        $(".dq_button.dq_start_stop b").removeClass("green").addClass("red").html("Off");
+                        this.toggleActive();
                     }
-                });
-            }
+                }
+            });
         },
 
         toggleActive: function() {
@@ -276,6 +289,13 @@ if (typeof DAILY_QUESTS === 'undefined') {
             const startX = GAME.char_data.x - 1;
             const startY = GAME.char_data.y - 1;
             
+            if (!LPVM || !LPVM.Finder) {
+                console.error("[DAILY QUESTS] LPVM.Finder not available");
+                setStatusMessage("Error: Pathfinding not available");
+                this.skipCurrentLocation();
+                return;
+            }
+            
             LPVM.Finder.setGrid(this.runtime.matrix);
             LPVM.Finder.findPath(startX, startY, targetX, targetY, (path) => {
                 if (!this.settings.active) return; // Check if stopped during pathfinding
@@ -312,6 +332,10 @@ if (typeof DAILY_QUESTS === 'undefined') {
         moveAlongPath: function() {
             if (!this.settings.active || this.runtime.path.length === 0) {
                 this.runtime.isMoving = false;
+                if (this.settings.active && this.runtime.path.length === 0) {
+                    // If we've reached the end of the path, interact with quest giver
+                    this.interactWithQuestGiver();
+                }
                 return;
             }
             
@@ -342,12 +366,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
             
             setTimeout(() => {
                 if (!this.settings.active) return; // Check if stopped during timeout
-                if (this.runtime.path.length > 0) {
-                    this.moveAlongPath();
-                } else {
-                    this.runtime.isMoving = false;
-                    this.interactWithQuestGiver();
-                }
+                this.moveAlongPath();
             }, this.settings.waitTime);
         },
         
@@ -567,6 +586,11 @@ if (typeof DAILY_QUESTS === 'undefined') {
         configureMobSpawner: function(mobType) {
             // Ensure only the correct mob type is targeted
             // This assumes the RESP object and panel structure exists
+            if (typeof RESP === 'undefined') {
+                console.error("[DAILY QUESTS] RESP object not available");
+                return;
+            }
+            
             const types = [RESP.Blue, RESP.Green, RESP.Purple, RESP.Yellow, RESP.Red]; // Assuming these correspond to mob types 0-4
             const buttons = [$("#resp_Panel .resp_blue"), $("#resp_Panel .resp_green"), $("#resp_Panel .resp_purple"), $("#resp_Panel .resp_yellow"), $("#resp_Panel .resp_red")];
             
