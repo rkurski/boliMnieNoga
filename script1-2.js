@@ -32,6 +32,25 @@ if (typeof GAME === 'undefined') { } else {
 
         class kwsv3 {
             constructor(charactersManager) {
+                this.ball_search_active = false;
+                this.ball_collected_count = 0;
+                this.ball_max_to_collect = 7;
+                this.ball_current_location_index = 0;
+                this.ball_locations_to_search = [];
+                this.ball_is_teleporting = false;
+                this.ball_is_moving = false;
+                this.ball_pickup_cooldown_active = false;
+                this.ball_pickup_cooldown_end_time = 0;
+                this.ball_location_change_cooldown_ms = 1500;
+                this.ball_matrix = [];
+                this.ball_path = [];
+                this.ball_search_timeout_id = null;
+                this.ball_movement_interval_id = null;
+                this.ball_cooldown_timeout_id = null;
+                this.ball_current_movement_target_coords = null;
+                // New property for EasyStar.js
+                this.ballFinder = null;
+
                 this.charactersManager = charactersManager;
                 this.isLogged((data) => {
                     Object.defineProperty(GAME, 'pid', {
@@ -2320,36 +2339,48 @@ if (typeof GAME === 'undefined') { } else {
             }
             // SZUKACZ KUKLI START
             startBallSearch() {
-              if (typeof GAME === 'undefined' || typeof GAME.char_data === 'undefined') {
-                  GAME.komunikat("Error: Jakiś bug ciężki.");
-                  return;
-              }
-    
-              this.ball_search_active = true;
-              this.ball_collected_count = 0;
-              this.ball_max_to_collect = 7;
-              this.ball_current_location_index = 0;
-              this.ball_locations_to_search = [];
-              this.ball_is_teleporting = false;
-              this.ball_is_moving = false;
-              this.ball_pickup_cooldown_active = false;
-              this.ball_pickup_cooldown_end_time = 0;
-              this.ball_location_change_cooldown_ms = 1500; // Default 1.5s
-              this.ball_matrix = [];
-              this.ball_path = [];
-    
-              this.clearBallSearchTimeouts();
-            
-              GAME.komunikat("SZUKACZ KUKLI: Szukanie start");
-              this.fetchEligibleLocations();
-              setTimeout(() => {
-                if (this.ball_locations_to_search.length === 0) {
-                    this.stopBallSearch("Jakiś bug przy pobraniu lokacji.");
+                if (typeof GAME === 'undefined' || typeof GAME.char_data === 'undefined') {
+                    GAME.komunikat("Error: Jakiś bug ciężki.");
                     return;
                 }
-                GAME.komunikat(`SZUKACZ KUKLI: ${this.ball_locations_to_search.length} lokacji do sprawdzenia.`);
-                this.processNextLocation();
-              }, 3000);
+
+                this.loadEasyStar(); // Load EasyStar.js at the start
+                this.ball_search_active = true;
+                this.ball_collected_count = 0;
+                this.ball_max_to_collect = 7;
+                this.ball_current_location_index = 0;
+                this.ball_locations_to_search = [];
+                this.ball_is_teleporting = false;
+                this.ball_is_moving = false;
+                this.ball_pickup_cooldown_active = false;
+                this.ball_pickup_cooldown_end_time = 0;
+                this.ball_location_change_cooldown_ms = 1500;
+                this.ball_matrix = [];
+                this.ball_path = [];
+
+                this.clearBallSearchTimeouts();
+                
+                GAME.komunikat("SZUKACZ KUKLI: Szukanie start");
+                this.fetchEligibleLocations();
+                setTimeout(() => {
+                    if (this.ball_locations_to_search.length === 0) {
+                        this.stopBallSearch("Jakiś bug przy pobraniu lokacji.");
+                        return;
+                    }
+                    GAME.komunikat(`SZUKACZ KUKLI: ${this.ball_locations_to_search.length} lokacji do sprawdzenia.`);
+                    this.processNextLocation();
+                }, 3000);
+            }
+            loadEasyStar() {
+              const esjs = document.createElement('script');
+              esjs.src = 'https://cdn.jsdelivr.net/npm/easystarjs@0.4.3/bin/easystar-0.4.3.min.js';
+              esjs.onload = () => {
+                  this.ballFinder = new EasyStar.js();
+                  this.ballFinder.enableDiagonals();
+                  this.ballFinder.setAcceptableTiles([0]); // 0 is walkable, 1 is a wall
+                  GAME.komunikat("SZUKACZ KUKLI: EasyStar.js załadowany i zainicjalizowany.");
+              };
+              document.head.appendChild(esjs);
             }
             stopBallSearch(reason) {
                 this.ball_search_active = false;
@@ -2501,7 +2532,7 @@ if (typeof GAME === 'undefined') { } else {
                 const mapData = GAME.mapcell;
                 
                 if (!mapData) {
-                    GAME.komunikat("SZUKACZ KUKLI: Błąd - nie udało się pobrać mapy i znaleźć drogi");
+                    GAME.komunikat("SZUKACZ KUKLI: Błąd - nie udało się pobrać mapy.");
                     return false;
                 }
                 
@@ -2513,11 +2544,9 @@ if (typeof GAME === 'undefined') { } else {
                     for (let j = 0; j < maxX; j++) {
                         const cellKey = parseInt(j + 1) + '_' + parseInt(i + 1);
                         if (mapData[cellKey] && mapData[cellKey].m == 1) {
-                            // This is a blocker/wall
-                            this.ball_matrix[i][j] = 1;
+                            this.ball_matrix[i][j] = 1; // Wall
                         } else {
-                            // This is a walkable cell
-                            this.ball_matrix[i][j] = 0;
+                            this.ball_matrix[i][j] = 0; // Walkable
                         }
                     }
                 }
@@ -2530,66 +2559,43 @@ if (typeof GAME === 'undefined') { } else {
                     return false;
                 }
                 
-                // Convert to 0-based coordinates for the matrix
+                if (!this.ballFinder) {
+                    GAME.komunikat("SZUKACZ KUKLI: EasyStar.js nie jest jeszcze załadowany.");
+                    return false;
+                }
+
+                // Convert to 0-based coordinates
                 const startX = GAME.char_data.x - 1;
                 const startY = GAME.char_data.y - 1;
                 const endX = targetX - 1;
                 const endY = targetY - 1;
-                
-                // Use pathfinding to find a path
+
                 this.ball_path = [];
-                
-                // Simple BFS pathfinding implementation
-                const queue = [[startX, startY]];
-                const visited = {};
-                const parent = {};
-                visited[`${startX}_${startY}`] = true;
-                
-                while (queue.length > 0) {
-                    const [x, y] = queue.shift();
-                    
-                    // Check if we've reached the target
-                    if (x === endX && y === endY) {
-                        // Reconstruct the path
-                        let current = `${endX}_${endY}`;
-                        while (current !== `${startX}_${startY}`) {
-                            const [cx, cy] = current.split('_').map(Number);
-                            this.ball_path.unshift([cx, cy]);
-                            current = parent[current];
+
+                this.ballFinder.setGrid(this.ball_matrix);
+                this.ballFinder.findPath(startX, startY, endX, endY, (path) => {
+                    if (path === null) {
+                        GAME.komunikat("SZUKACZ KUKLI: Nie znaleziono ścieżki do kukły.");
+                        this.ball_is_moving = false;
+                        this.ball_current_location_index++;
+                        this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                    } else {
+                        if (path[0].x == startX && path[0].y == startY) {
+                            path.shift(); // Remove starting position
                         }
-                        return true;
+                        this.ball_path = path;
+                        setTimeout(() => {
+                            this.moveAlongPath();
+                        }, 40); // Match LPVM's wait time
                     }
-                    
-                    // Check all 8 directions
-                    const directions = [
-                        [0, -1], [1, -1], [1, 0], [1, 1], 
-                        [0, 1], [-1, 1], [-1, 0], [-1, -1]
-                    ];
-                    
-                    for (const [dx, dy] of directions) {
-                        const nx = x + dx;
-                        const ny = y + dy;
-                        
-                        // Check if the new position is valid
-                        if (nx >= 0 && nx < this.ball_matrix[0].length && 
-                            ny >= 0 && ny < this.ball_matrix.length && 
-                            this.ball_matrix[ny][nx] === 0 && 
-                            !visited[`${nx}_${ny}`]) {
-                            
-                            queue.push([nx, ny]);
-                            visited[`${nx}_${ny}`] = true;
-                            parent[`${nx}_${ny}`] = `${x}_${y}`;
-                        }
-                    }
-                }
-                
-                // No path found
-                return false;
+                });
+                this.ballFinder.calculate();
+                return true;
             }
             
             navigateToBall(targetCoords) {
                 if (!this.ball_search_active || typeof GAME.char_data === 'undefined' || typeof GAME.socket === 'undefined' || this.ball_is_moving) {
-                    if(this.ball_search_active) {
+                    if (this.ball_search_active) {
                         this.ball_current_location_index++;
                         this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
                     }
@@ -2598,33 +2604,31 @@ if (typeof GAME === 'undefined') { } else {
 
                 this.ball_is_moving = true;
                 this.ball_current_movement_target_coords = targetCoords;
-                GAME.komunikat(`SZUKACZ KUKLI: Ide po kukle do ${targetCoords.x},${targetCoords.y}`);
+                GAME.komunikat(`SZUKACZ KUKLI: Idę po kukłę do ${targetCoords.x},${targetCoords.y}`);
 
-                if (this.findPathToBall(targetCoords.x, targetCoords.y)) {
-                    this.moveAlongPath();
-                } else {
-                    // If pathfinding fails, try direct movement as fallback
-                    GAME.komunikat("SZUKACZ KUKLI: Nie udało sie znaleźć drogi do kukli, próbuje iść przed siebie");
-                    this.useDirectMovement(targetCoords);
+                if (!this.findPathToBall(targetCoords.x, targetCoords.y)) {
+                    GAME.komunikat("SZUKACZ KUKLI: Nie udało się znaleźć drogi do kukły.");
+                    this.ball_is_moving = false;
+                    this.ball_current_location_index++;
+                    this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
                 }
             }
-            
+                  
             // Move along the calculated path to the ball
             moveAlongPath() {
                 if (!this.ball_search_active || !this.ball_path || this.ball_path.length === 0) {
+                    this.ball_is_moving = false;
                     return;
                 }
-                
-                // Get the next step in the path
+
                 const nextStep = this.ball_path[0];
-                const nextX = nextStep[0] + 1; // Convert back to 1-based coordinates
-                const nextY = nextStep[1] + 1;
-                
-                // Determine direction to move
+                const nextX = nextStep.x; // 0-based
+                const nextY = nextStep.y;
+
                 let direction = 0;
-                const currentX = GAME.char_data.x;
-                const currentY = GAME.char_data.y;
-                
+                const currentX = GAME.char_data.x - 1; // Convert to 0-based
+                const currentY = GAME.char_data.y - 1;
+
                 if (nextX > currentX && nextY === currentY) {
                     direction = 7; // Right
                 } else if (nextX < currentX && nextY === currentY) {
@@ -2642,46 +2646,25 @@ if (typeof GAME === 'undefined') { } else {
                 } else if (nextX < currentX && nextY > currentY) {
                     direction = 4; // Down-left
                 }
-                
+
                 if (direction !== 0) {
-                    // Send movement command
                     GAME.socket.emit('ga', {
                         a: 4,
                         dir: direction,
-                        vo: (GAME.map_options ? GAME.map_options.vo : undefined)
+                        vo: GAME.map_options ? GAME.map_options.vo : undefined
                     });
-                    
-                    // Set up a check for movement completion
-                    this.ball_movement_interval_id = setInterval(() => {
-                        if (!this.ball_search_active) {
-                            clearInterval(this.ball_movement_interval_id);
-                            this.ball_movement_interval_id = null;
-                            return;
+
+                    this.ball_path.shift(); // Remove the step we just moved to
+                    setTimeout(() => {
+                        if (this.ball_path.length > 0) {
+                            this.moveAlongPath();
+                        } else {
+                            this.ball_is_moving = false;
+                            setTimeout(() => this.pickupBall(), 500); // Match LPVM's delay
                         }
-                        
-                        // Check if we've reached the next position
-                        if (GAME.char_data.x === nextX && GAME.char_data.y === nextY) {
-                            clearInterval(this.ball_movement_interval_id);
-                            this.ball_movement_interval_id = null;
-                            
-                            // Remove the step we just completed
-                            this.ball_path.shift();
-                            
-                            // Check if we've reached the ball
-                            if (this.ball_path.length === 0) {
-                                this.ball_is_moving = false;
-                                this.pickupBall();
-                            } else {
-                                // Continue to the next step
-                                setTimeout(() => {
-                                    this.moveAlongPath();
-                                }, 100);
-                            }
-                        }
-                    }, 200);
+                    }, 40); // Match LPVM's wait time
                 } else {
-                    // If we can't determine a direction, try to recalculate the path
-                    GAME.komunikat("SZUKACZ KUKLI: Sprawdzam ponownie droge...");
+                    GAME.komunikat("SZUKACZ KUKLI: Sprawdzam ponownie drogę...");
                     if (this.ball_current_movement_target_coords) {
                         this.navigateToBall(this.ball_current_movement_target_coords);
                     } else {
@@ -2693,58 +2676,9 @@ if (typeof GAME === 'undefined') { } else {
             }
             
             // Fallback direct movement method if pathfinding fails
-            useDirectMovement(targetCoords) {
-                if (this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
-
-                this.ball_movement_interval_id = setInterval(() => {
-                    if (!this.ball_search_active || !this.ball_is_moving) {
-                        if(this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
-                        this.ball_movement_interval_id = null;
-                        this.ball_is_moving = false;
-                        if(this.ball_search_active) {
-                            this.ball_current_location_index++;
-                            this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
-                        }
-                        return;
-                    }
-
-                    const px = GAME.char_data.x;
-                    const py = GAME.char_data.y;
-                    const targetX = this.ball_current_movement_target_coords.x;
-                    const targetY = this.ball_current_movement_target_coords.y;
-
-                    if (px == targetX && py == targetY) {
-                        if(this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
-                        this.ball_movement_interval_id = null;
-                        this.ball_is_moving = false;
-                        this.pickupBall();
-                        return;
-                    }
-
-                    let dx = targetX - px;
-                    let dy = targetY - py;
-                    let dir = 0;
-
-                    if (dx > 0 && dy > 0) dir = 3;      
-                    else if (dx < 0 && dy > 0) dir = 4; 
-                    else if (dx > 0 && dy < 0) dir = 5; 
-                    else if (dx < 0 && dy < 0) dir = 6; 
-                    else if (dx > 0) dir = 7;           
-                    else if (dx < 0) dir = 8;           
-                    else if (dy > 0) dir = 1;           
-                    else if (dy < 0) dir = 2;           
-                    
-                    if (dir !== 0) {
-                        GAME.socket.emit('ga', { a: 4, dir: dir, vo: (GAME.map_options ? GAME.map_options.vo : undefined) });
-                    } else {
-                        GAME.komunikat("BALL SEARCHER: BUG - nie doszedlem do kukli.");
-                        if(this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
-                        this.ball_movement_interval_id = null;
-                        this.ball_is_moving = false;
-                        this.ball_current_location_index++;
-                        this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
-                    }
-                }, 700 + Math.random() * 300);
+            useDirectMovement() {
+                // Deprecated, as we're using EasyStar.js pathfinding
+                GAME.komunikat("SZUKACZ KUKLI: Direct movement is disabled, using EasyStar.js pathfinding.");
             }
 
             pickupBall() {
@@ -2797,52 +2731,18 @@ if (typeof GAME === 'undefined') { } else {
             
             // Handle socket events for ball searcher in handleSockets method
             handleBallSearcherSockets(res) {
-                // Handle movement completion for pathfinding
-                if (this.ball_search_active && res.a === 4 && res.char_id === GAME.char_id) {
-                    if (this.ball_path && this.ball_path.length > 0) {
-                        // We've moved one step along the path
-                        const nextStep = this.ball_path[0];
-                        const nextX = nextStep[0] + 1; // Convert back to 1-based coordinates
-                        const nextY = nextStep[1] + 1;
-                        
-                        if (GAME.char_data.x === nextX && GAME.char_data.y === nextY) {
-                            clearInterval(this.ball_movement_interval_id);
-                            this.ball_movement_interval_id = null;
-                            
-                            // Remove the step we just completed
-                            this.ball_path.shift();
-                            
-                            // Check if we've reached the ball
-                            if (this.ball_path.length === 0) {
-                                this.ball_is_moving = false;
-                                this.pickupBall();
-                            } else {
-                                // Continue to the next step
-                                setTimeout(() => {
-                                    this.moveAlongPath();
-                                }, 100);
-                            }
-                        }
-                    }
-                }
-                
-                // Handle ball pickup response
                 if (this.ball_search_active && res.a === 33 && res.type === 3) {
                     if (res.e === 0) {
-                        // Success
                         this.ball_collected_count++;
                         $(".search_balls").text(`STOP BALLS (${this.ball_collected_count}/${this.ball_max_to_collect})`);
-                        GAME.komunikat(`SZUKACZ KUKLI: Podniosłem kukle! (${this.ball_collected_count}/${this.ball_max_to_collect})`);
+                        GAME.komunikat(`SZUKACZ KUKLI: Podniosłem kukłę! (${this.ball_collected_count}/${this.ball_max_to_collect})`);
                         
-                        // Set cooldown
                         this.ball_pickup_cooldown_active = true;
-                        this.ball_pickup_cooldown_end_time = this.getCurrentTimestamp() + 60000; // 60 second cooldown
+                        this.ball_pickup_cooldown_end_time = this.getCurrentTimestamp() + 60000;
                         
-                        // Move to next location
                         this.ball_current_location_index++;
                         this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
                     } else if (res.e === 1) {
-                        // Cooldown active
                         this.ball_pickup_cooldown_active = true;
                         if (res.cd) {
                             this.ball_pickup_cooldown_end_time = this.getCurrentTimestamp() + (res.cd * 1000);
@@ -2854,7 +2754,6 @@ if (typeof GAME === 'undefined') { } else {
                                 this.processNextLocation();
                             }, (waitTime * 1000) + 500);
                         } else {
-                            // Default cooldown if not specified
                             this.ball_pickup_cooldown_end_time = this.getCurrentTimestamp() + 60000;
                             GAME.komunikat("SZUKACZ KUKLI: Cooldown aktywny. Czekam 60s.");
                             this.ball_cooldown_timeout_id = setTimeout(() => {
@@ -2864,8 +2763,7 @@ if (typeof GAME === 'undefined') { } else {
                             }, 60500);
                         }
                     } else {
-                        // Other error
-                        GAME.komunikat(`SZUKACZ KUKLI: Nie udało się podnieść kukli. Jakiś błąd: ${res.e}`);
+                        GAME.komunikat(`SZUKACZ KUKLI: Nie udało się podnieść kukły. Błąd: ${res.e}`);
                         this.ball_current_location_index++;
                         this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
                     }
