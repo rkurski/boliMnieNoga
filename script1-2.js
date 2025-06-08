@@ -2324,7 +2324,7 @@ if (typeof GAME === 'undefined') { } else {
                   GAME.komunikat("Error: Jakiś bug ciężki.");
                   return;
               }
-    
+
               this.ball_search_active = true;
               this.ball_collected_count = 0;
               this.ball_max_to_collect = 7;
@@ -2337,20 +2337,47 @@ if (typeof GAME === 'undefined') { } else {
               this.ball_location_change_cooldown_ms = 1500; // Default 1.5s
               this.ball_matrix = [];
               this.ball_path = [];
-    
+              this.ball_map_data = null;
+              this.ball_finder = null;
+              this.ball_wait = 40; // Similar to LPVM.wait
+
               this.clearBallSearchTimeouts();
+              this.loadEasyStar(() => {
+                GAME.komunikat("SZUKACZ KUKLI: Szukanie start");
+                this.fetchEligibleLocations();
+                setTimeout(() => {
+                  if (this.ball_locations_to_search.length === 0) {
+                      this.stopBallSearch("Jakiś bug przy pobraniu lokacji.");
+                      return;
+                  }
+                  GAME.komunikat(`SZUKACZ KUKLI: ${this.ball_locations_to_search.length} lokacji do sprawdzenia.`);
+                  this.processNextLocation();
+                }, 3000);
+              });
+            }
             
-              GAME.komunikat("SZUKACZ KUKLI: Szukanie start");
-              this.fetchEligibleLocations();
-              setTimeout(() => {
-                if (this.ball_locations_to_search.length === 0) {
-                    this.stopBallSearch("Jakiś bug przy pobraniu lokacji.");
+            // Load EasyStar.js library similar to LPVM.LoadES
+            loadEasyStar(callback) {
+                if (typeof EasyStar !== 'undefined') {
+                    // EasyStar already loaded
+                    this.ball_finder = new EasyStar.js();
+                    this.ball_finder.enableDiagonals();
+                    this.ball_finder.setAcceptableTiles([0]); // 0 for walkable tiles (opposite of LPVM which uses 1)
+                    callback();
                     return;
                 }
-                GAME.komunikat(`SZUKACZ KUKLI: ${this.ball_locations_to_search.length} lokacji do sprawdzenia.`);
-                this.processNextLocation();
-              }, 3000);
+                
+                const esjs = document.createElement('script');
+                esjs.src = 'https://cdn.jsdelivr.net/npm/easystarjs@0.4.3/bin/easystar-0.4.3.min.js';
+                esjs.onload = () => {
+                    this.ball_finder = new EasyStar.js();
+                    this.ball_finder.enableDiagonals();
+                    this.ball_finder.setAcceptableTiles([0]); // 0 for walkable tiles
+                    callback();
+                };
+                document.head.append(esjs);
             }
+
             stopBallSearch(reason) {
                 this.ball_search_active = false;
                 this.ball_is_teleporting = false;
@@ -2496,11 +2523,12 @@ if (typeof GAME === 'undefined') { } else {
                     this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
                 }
             }
+            
             createBallMatrix() {
                 this.ball_matrix = [];
-                const mapData = GAME.mapcell;
+                this.ball_map_data = GAME.mapcell;
                 
-                if (!mapData) {
+                if (!this.ball_map_data) {
                     GAME.komunikat("SZUKACZ KUKLI: Błąd - nie udało się pobrać mapy i znaleźć drogi");
                     return false;
                 }
@@ -2512,11 +2540,11 @@ if (typeof GAME === 'undefined') { } else {
                     this.ball_matrix[i] = [];
                     for (let j = 0; j < maxX; j++) {
                         const cellKey = parseInt(j + 1) + '_' + parseInt(i + 1);
-                        if (mapData[cellKey] && mapData[cellKey].m == 1) {
-                            // This is a blocker/wall
+                        if (this.ball_map_data[cellKey] && this.ball_map_data[cellKey].m == 1) {
+                            // This is a blocker/wall - mark as 1 (blocked)
                             this.ball_matrix[i][j] = 1;
                         } else {
-                            // This is a walkable cell
+                            // This is a walkable cell - mark as 0 (walkable)
                             this.ball_matrix[i][j] = 0;
                         }
                     }
@@ -2524,69 +2552,7 @@ if (typeof GAME === 'undefined') { } else {
                 return true;
             }
             
-            // Find path to ball using matrix pathfinding
-            findPathToBall(targetX, targetY) {
-                if (!this.createBallMatrix()) {
-                    return false;
-                }
-                
-                // Convert to 0-based coordinates for the matrix
-                const startX = GAME.char_data.x - 1;
-                const startY = GAME.char_data.y - 1;
-                const endX = targetX - 1;
-                const endY = targetY - 1;
-                
-                // Use pathfinding to find a path
-                this.ball_path = [];
-                
-                // Simple BFS pathfinding implementation
-                const queue = [[startX, startY]];
-                const visited = {};
-                const parent = {};
-                visited[`${startX}_${startY}`] = true;
-                
-                while (queue.length > 0) {
-                    const [x, y] = queue.shift();
-                    
-                    // Check if we've reached the target
-                    if (x === endX && y === endY) {
-                        // Reconstruct the path
-                        let current = `${endX}_${endY}`;
-                        while (current !== `${startX}_${startY}`) {
-                            const [cx, cy] = current.split('_').map(Number);
-                            this.ball_path.unshift([cx, cy]);
-                            current = parent[current];
-                        }
-                        return true;
-                    }
-                    
-                    // Check all 8 directions
-                    const directions = [
-                        [0, -1], [1, -1], [1, 0], [1, 1], 
-                        [0, 1], [-1, 1], [-1, 0], [-1, -1]
-                    ];
-                    
-                    for (const [dx, dy] of directions) {
-                        const nx = x + dx;
-                        const ny = y + dy;
-                        
-                        // Check if the new position is valid
-                        if (nx >= 0 && nx < this.ball_matrix[0].length && 
-                            ny >= 0 && ny < this.ball_matrix.length && 
-                            this.ball_matrix[ny][nx] === 0 && 
-                            !visited[`${nx}_${ny}`]) {
-                            
-                            queue.push([nx, ny]);
-                            visited[`${nx}_${ny}`] = true;
-                            parent[`${nx}_${ny}`] = `${x}_${y}`;
-                        }
-                    }
-                }
-                
-                // No path found
-                return false;
-            }
-            
+            // Navigate to ball using EasyStar exactly like LPVM.Go
             navigateToBall(targetCoords) {
                 if (!this.ball_search_active || typeof GAME.char_data === 'undefined' || typeof GAME.socket === 'undefined' || this.ball_is_moving) {
                     if(this.ball_search_active) {
@@ -2600,95 +2566,122 @@ if (typeof GAME === 'undefined') { } else {
                 this.ball_current_movement_target_coords = targetCoords;
                 GAME.komunikat(`SZUKACZ KUKLI: Ide po kukle do ${targetCoords.x},${targetCoords.y}`);
 
-                if (this.findPathToBall(targetCoords.x, targetCoords.y)) {
-                    this.moveAlongPath();
-                } else {
-                    // If pathfinding fails, try direct movement as fallback
-                    GAME.komunikat("SZUKACZ KUKLI: Nie udało sie znaleźć drogi do kukli, próbuje iść przed siebie");
-                    this.useDirectMovement(targetCoords);
-                }
+                // Create matrix and find path using EasyStar exactly like LPVM
+                this.createBallMatrix();
+                this.ball_finder.setGrid(this.ball_matrix);
+                
+                const pathID = this.ball_finder.findPath(
+                    GAME.char_data.x - 1, 
+                    GAME.char_data.y - 1, 
+                    parseInt(targetCoords.x) - 1, 
+                    parseInt(targetCoords.y) - 1, 
+                    (path) => {
+                        if (path === null) {
+                            // No path found, try direct movement as fallback
+                            GAME.komunikat("SZUKACZ KUKLI: Nie udało sie znaleźć drogi do kukli, próbuje iść przed siebie");
+                            this.useDirectMovement(targetCoords);
+                        } else {
+                            // Remove starting position if it's the same as current position
+                            if (path[0] && path[0].x == GAME.char_data.x - 1 && path[0].y == GAME.char_data.y - 1) {
+                                path.shift();
+                            }
+                            this.ball_path = path;
+                            setTimeout(() => {
+                                this.moveAlongPath();
+                            }, this.ball_wait);
+                        }
+                    }
+                );
+                
+                this.ball_finder.calculate();
             }
+
+
             
-            // Move along the calculated path to the ball
+            // Move along the calculated path exactly like LPVM.Move
             moveAlongPath() {
                 if (!this.ball_search_active || !this.ball_path || this.ball_path.length === 0) {
+                    this.ball_is_moving = false;
                     return;
                 }
                 
-                // Get the next step in the path
-                const nextStep = this.ball_path[0];
-                const nextX = nextStep[0] + 1; // Convert back to 1-based coordinates
-                const nextY = nextStep[1] + 1;
-                
-                // Determine direction to move
-                let direction = 0;
-                const currentX = GAME.char_data.x;
-                const currentY = GAME.char_data.y;
-                
-                if (nextX > currentX && nextY === currentY) {
-                    direction = 7; // Right
-                } else if (nextX < currentX && nextY === currentY) {
-                    direction = 8; // Left
-                } else if (nextX === currentX && nextY > currentY) {
-                    direction = 1; // Down
-                } else if (nextX === currentX && nextY < currentY) {
-                    direction = 2; // Up
-                } else if (nextX > currentX && nextY > currentY) {
-                    direction = 3; // Down-right
-                } else if (nextX < currentX && nextY < currentY) {
-                    direction = 6; // Up-left
-                } else if (nextX > currentX && nextY < currentY) {
-                    direction = 5; // Up-right
-                } else if (nextX < currentX && nextY > currentY) {
-                    direction = 4; // Down-left
-                }
-                
-                if (direction !== 0) {
-                    // Send movement command
+                // Use exact same movement logic as LPVM.Move
+                if (this.ball_path[0].x > GAME.char_data.x - 1 && this.ball_path[0].y == GAME.char_data.y - 1) {
                     GAME.socket.emit('ga', {
                         a: 4,
-                        dir: direction,
-                        vo: (GAME.map_options ? GAME.map_options.vo : undefined)
+                        dir: 7,
+                        vo: GAME.map_options.vo
                     });
-                    
-                    // Set up a check for movement completion
-                    this.ball_movement_interval_id = setInterval(() => {
-                        if (!this.ball_search_active) {
-                            clearInterval(this.ball_movement_interval_id);
-                            this.ball_movement_interval_id = null;
-                            return;
-                        }
-                        
-                        // Check if we've reached the next position
-                        if (GAME.char_data.x === nextX && GAME.char_data.y === nextY) {
-                            clearInterval(this.ball_movement_interval_id);
-                            this.ball_movement_interval_id = null;
-                            
-                            // Remove the step we just completed
-                            this.ball_path.shift();
-                            
-                            // Check if we've reached the ball
-                            if (this.ball_path.length === 0) {
-                                this.ball_is_moving = false;
-                                this.pickupBall();
-                            } else {
-                                // Continue to the next step
-                                setTimeout(() => {
-                                    this.moveAlongPath();
-                                }, 100);
-                            }
-                        }
-                    }, 200);
+                } else if (this.ball_path[0].x < GAME.char_data.x - 1 && this.ball_path[0].y == GAME.char_data.y - 1) {
+                    GAME.socket.emit('ga', {
+                        a: 4,
+                        dir: 8,
+                        vo: GAME.map_options.vo
+                    });
+                } else if (this.ball_path[0].x == GAME.char_data.x - 1 && this.ball_path[0].y > GAME.char_data.y - 1) {
+                    GAME.socket.emit('ga', {
+                        a: 4,
+                        dir: 1,
+                        vo: GAME.map_options.vo
+                    });
+                } else if (this.ball_path[0].x == GAME.char_data.x - 1 && this.ball_path[0].y < GAME.char_data.y - 1) {
+                    GAME.socket.emit('ga', {
+                        a: 4,
+                        dir: 2,
+                        vo: GAME.map_options.vo
+                    });
+                } else if (this.ball_path[0].x > GAME.char_data.x - 1 && this.ball_path[0].y > GAME.char_data.y - 1) {
+                    GAME.socket.emit('ga', {
+                        a: 4,
+                        dir: 3,
+                        vo: GAME.map_options.vo
+                    });
+                } else if (this.ball_path[0].x < GAME.char_data.x - 1 && this.ball_path[0].y < GAME.char_data.y - 1) {
+                    GAME.socket.emit('ga', {
+                        a: 4,
+                        dir: 6,
+                        vo: GAME.map_options.vo
+                    });
+                } else if (this.ball_path[0].x > GAME.char_data.x - 1 && this.ball_path[0].y < GAME.char_data.y - 1) {
+                    GAME.socket.emit('ga', {
+                        a: 4,
+                        dir: 5,
+                        vo: GAME.map_options.vo
+                    });
+                } else if (this.ball_path[0].x < GAME.char_data.x - 1 && this.ball_path[0].y > GAME.char_data.y - 1) {
+                    GAME.socket.emit('ga', {
+                        a: 4,
+                        dir: 4,
+                        vo: GAME.map_options.vo
+                    });
                 } else {
-                    // If we can't determine a direction, try to recalculate the path
-                    GAME.komunikat("SZUKACZ KUKLI: Sprawdzam ponownie droge...");
-                    if (this.ball_current_movement_target_coords) {
-                        this.navigateToBall(this.ball_current_movement_target_coords);
+                    // Recalculate path if we can't determine direction
+                    this.navigateToBall(this.ball_current_movement_target_coords);
+                }
+            }
+            
+            // Handle movement completion exactly like LPVM.Next
+            handleMovementStep() {
+                if (this.ball_path.length > 0) {
+                    this.ball_path.shift(); // Remove completed step
+                    if (this.ball_path.length > 0) {
+                        // Continue to next step
+                        setTimeout(() => {
+                            this.moveAlongPath();
+                        }, this.ball_wait);
                     } else {
+                        // Reached destination
                         this.ball_is_moving = false;
-                        this.ball_current_location_index++;
-                        this.ball_search_timeout_id = setTimeout(() => this.processNextLocation(), this.ball_location_change_cooldown_ms);
+                        setTimeout(() => {
+                            this.pickupBall();
+                        }, 500);
                     }
+                } else {
+                    // Path completed
+                    this.ball_is_moving = false;
+                    setTimeout(() => {
+                        this.pickupBall();
+                    }, 500);
                 }
             }
             
@@ -2725,6 +2718,7 @@ if (typeof GAME === 'undefined') { } else {
                     let dy = targetY - py;
                     let dir = 0;
 
+                    // Use same direction logic as original but with LPVM-style approach
                     if (dx > 0 && dy > 0) dir = 3;      
                     else if (dx < 0 && dy > 0) dir = 4; 
                     else if (dx > 0 && dy < 0) dir = 5; 
@@ -2737,7 +2731,7 @@ if (typeof GAME === 'undefined') { } else {
                     if (dir !== 0) {
                         GAME.socket.emit('ga', { a: 4, dir: dir, vo: (GAME.map_options ? GAME.map_options.vo : undefined) });
                     } else {
-                        GAME.komunikat("BALL SEARCHER: BUG - nie doszedlem do kukli.");
+                        GAME.komunikat("SZUKACZ KUKLI: BUG - nie doszedlem do kukli.");
                         if(this.ball_movement_interval_id) clearInterval(this.ball_movement_interval_id);
                         this.ball_movement_interval_id = null;
                         this.ball_is_moving = false;
@@ -2758,7 +2752,7 @@ if (typeof GAME === 'undefined') { } else {
 
                 if (this.ball_pickup_cooldown_active && this.getCurrentTimestamp() < this.ball_pickup_cooldown_end_time) {
                     const waitTime = Math.ceil((this.ball_pickup_cooldown_end_time - this.getCurrentTimestamp()) / 1000);
-                    GAME.komunikat(`BALL SEARCHER: Na kukli ale cooldown. Waiting ${waitTime}s.`);
+                    GAME.komunikat(`SZUKACZ KUKLI: Na kukli ale cooldown. Waiting ${waitTime}s.`);
                     this.ball_cooldown_timeout_id = setTimeout(() => {
                         this.ball_pickup_cooldown_active = false; 
                         this.pickupBall(); 
@@ -2770,7 +2764,7 @@ if (typeof GAME === 'undefined') { } else {
                 if (pickupButton.length > 0) {
                     const ballId = pickupButton.data('id');
                     if (ballId) {
-                        GAME.komunikat(`BALL SEARCHER: Probuje podniesc kukle (item ID on map: ${ballId})`);
+                        GAME.komunikat(`SZUKACZ KUKLI: Probuje podniesc kukle (item ID on map: ${ballId})`);
                         GAME.emitOrder({ a: 33, type: 3, id: parseInt(ballId) });
                         
                         // Set a timeout to move on if no response is received
@@ -2795,35 +2789,12 @@ if (typeof GAME === 'undefined') { } else {
                 return new Date().getTime();
             }
             
-            // Handle socket events for ball searcher in handleSockets method
+            // Handle socket events exactly like LPVM.HandleSockets
             handleBallSearcherSockets(res) {
-                // Handle movement completion for pathfinding
+                // Handle movement completion exactly like LPVM
                 if (this.ball_search_active && res.a === 4 && res.char_id === GAME.char_id) {
-                    if (this.ball_path && this.ball_path.length > 0) {
-                        // We've moved one step along the path
-                        const nextStep = this.ball_path[0];
-                        const nextX = nextStep[0] + 1; // Convert back to 1-based coordinates
-                        const nextY = nextStep[1] + 1;
-                        
-                        if (GAME.char_data.x === nextX && GAME.char_data.y === nextY) {
-                            clearInterval(this.ball_movement_interval_id);
-                            this.ball_movement_interval_id = null;
-                            
-                            // Remove the step we just completed
-                            this.ball_path.shift();
-                            
-                            // Check if we've reached the ball
-                            if (this.ball_path.length === 0) {
-                                this.ball_is_moving = false;
-                                this.pickupBall();
-                            } else {
-                                // Continue to the next step
-                                setTimeout(() => {
-                                    this.moveAlongPath();
-                                }, 100);
-                            }
-                        }
-                    }
+                    // Movement completed, handle next step exactly like LPVM.Next
+                    this.handleMovementStep();
                 }
                 
                 // Handle ball pickup response
