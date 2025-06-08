@@ -7,6 +7,67 @@
 
 // Create the DAILY_QUESTS object if it doesn't exist
 if (typeof DAILY_QUESTS === 'undefined') {
+    // Define helper functions first to avoid "not defined" errors
+    function updateDailyQuestsUI() {
+        updateQuestsList();
+        updateProgressCounter();
+    }
+
+    function updateQuestsList() {
+        const $list = $('#dq_locations_list');
+        $list.empty();
+        
+        if (!DAILY_QUESTS || !DAILY_QUESTS.locations) return;
+        
+        DAILY_QUESTS.locations.forEach((location, index) => {
+            const $location = $('<div class="dq_location"></div>');
+            $location.data('index', index);
+            
+            // Add toggle checkbox
+            const $toggle = $('<input type="checkbox" class="dq_location_toggle">');
+            $toggle.prop('checked', !location.disabled);
+            $location.append($toggle);
+            
+            // Add location name
+            const $name = $('<div class="dq_location_name"></div>').text(location.name);
+            if (location.completed) {
+                $name.addClass('completed');
+            }
+            if (DAILY_QUESTS.runtime.currentLocationIndex === index && DAILY_QUESTS.settings.active) {
+                $location.addClass('active');
+            }
+            $location.append($name);
+            
+            // Add status indicator
+            const $status = $('<div class="dq_location_status"></div>');
+            if (location.completed) {
+                $status.text('✓');
+                $status.css('color', 'green');
+            } else if (location.disabled) {
+                $status.text('✗');
+                $status.css('color', 'red');
+            } else {
+                $status.text('○');
+                $status.css('color', 'white');
+            }
+            $location.append($status);
+            
+            $list.append($location);
+        });
+    }
+
+    function updateProgressCounter() {
+        if (!DAILY_QUESTS || !DAILY_QUESTS.locations) return;
+        
+        const total = DAILY_QUESTS.locations.length;
+        const completed = DAILY_QUESTS.locations.filter(loc => loc.completed).length;
+        $('#dq_progress_count').text(completed + '/' + total);
+    }
+
+    function setStatusMessage(message) {
+        $('#dq_status_message').text(message);
+    }
+
     var DAILY_QUESTS = {
         settings: {
             active: false,
@@ -70,8 +131,8 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
 
         initializeUI: function() {
-            this.updateQuestsList();
-            this.updateProgressCounter();
+            updateQuestsList();
+            updateProgressCounter();
         },
 
         setupEventHandlers: function() {
@@ -128,7 +189,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
         toggleLocationEnabled: function(index) {
             if (index >= 0 && index < this.locations.length) {
                 this.locations[index].disabled = !this.locations[index].disabled;
-                this.updateQuestsList();
+                updateQuestsList();
             }
         },
         
@@ -137,20 +198,20 @@ if (typeof DAILY_QUESTS === 'undefined') {
                 loc.completed = false;
             });
             this.runtime.currentLocationIndex = 0;
-            this.updateQuestsList();
-            this.updateProgressCounter();
-            this.setStatusMessage("Progress reset");
+            updateQuestsList();
+            updateProgressCounter();
+            setStatusMessage("Progress reset");
         },
         
         startQuestProcessing: function() {
             this.findNextLocation();
             
             if (this.runtime.currentLocationIndex < this.locations.length) {
-                this.setStatusMessage("Starting quest at " + this.locations[this.runtime.currentLocationIndex].name);
-                this.updateQuestsList();
+                setStatusMessage("Starting quest at " + this.locations[this.runtime.currentLocationIndex].name);
+                updateQuestsList();
                 this.teleportToCurrentLocation();
             } else {
-                this.setStatusMessage("All quests completed!");
+                setStatusMessage("All quests completed!");
                 this.settings.active = false;
                 // Update button state
                 $(".dq_button.dq_start_stop b").removeClass("green").addClass("red").html("Off");
@@ -167,8 +228,8 @@ if (typeof DAILY_QUESTS === 'undefined') {
             this.runtime.isMoving = false;
             this.runtime.path = [];
             this.stopActivities(); // Ensure activities are stopped
-            this.setStatusMessage("Quest processing stopped");
-            this.updateQuestsList();
+            setStatusMessage("Quest processing stopped");
+            updateQuestsList();
         },
         
         findNextLocation: function() {
@@ -188,7 +249,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
             }
             
             const location = this.locations[this.runtime.currentLocationIndex];
-            this.setStatusMessage("Teleporting to " + location.name);
+            setStatusMessage("Teleporting to " + location.name);
             
             GAME.socket.emit('ga', {
                 a: 12,
@@ -206,7 +267,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
             if (!this.settings.active) return;
             
             const location = this.locations[this.runtime.currentLocationIndex];
-            this.setStatusMessage("Finding path to quest giver in " + location.name);
+            setStatusMessage("Finding path to quest giver in " + location.name);
             
             this.createMatrix();
             
@@ -219,7 +280,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
             LPVM.Finder.findPath(startX, startY, targetX, targetY, (path) => {
                 if (!this.settings.active) return; // Check if stopped during pathfinding
                 if (path === null) {
-                    this.setStatusMessage("No path found to quest giver!");
+                    setStatusMessage("No path found to quest giver!");
                     this.skipCurrentLocation();
                 } else {
                     if (path.length > 0 && path[0].x == startX && path[0].y == startY) {
@@ -292,7 +353,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
         
         interactWithQuestGiver: function() {
             if (!this.settings.active) return;
-            this.setStatusMessage("Interacting with quest giver");
+            setStatusMessage("Interacting with quest giver");
             
             GAME.socket.emit('ga', { a: 2 });
             
@@ -306,10 +367,10 @@ if (typeof DAILY_QUESTS === 'undefined') {
             if (!this.settings.active) return;
             
             this.runtime.isProcessingQuest = true;
-            this.setStatusMessage("Processing quest");
+            setStatusMessage("Processing quest");
             
             if ($("#quest_con").length === 0) {
-                this.setStatusMessage("Quest window not found. Retrying interaction...");
+                setStatusMessage("Quest window not found. Retrying interaction...");
                 // Maybe the quest was instantly completed or failed to open
                 // Let's try moving to the next location after a delay
                 setTimeout(() => {
@@ -325,7 +386,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
             if (this.runtime.questType) {
                 this.processQuestByType();
             } else {
-                this.setStatusMessage("Unknown quest type, using default action.");
+                setStatusMessage("Unknown quest type, using default action.");
                 this.useQuestProceed();
             }
         },
@@ -459,12 +520,12 @@ if (typeof DAILY_QUESTS === 'undefined') {
             const questType = currentGoal.type.toUpperCase(); // Use goal type
 
             if (this.settings.skipTypes[questType]) {
-                this.setStatusMessage("Skipping " + questType + " quest");
+                setStatusMessage("Skipping " + questType + " quest");
                 this.skipCurrentQuest();
                 return;
             }
             
-            this.setStatusMessage("Processing " + questType + " quest goal");
+            setStatusMessage("Processing " + questType + " quest goal");
             
             switch (questType) {
                 case "RESOURCE": this.processResourceQuest(); break;
@@ -479,7 +540,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
         
         processResourceQuest: function() {
-            this.setStatusMessage("Collecting resources");
+            setStatusMessage("Collecting resources");
             this.startProgressChecking();
             if ($("#res_Panel .res_status").hasClass("red")) {
                 $("#res_Panel .res_button.res_res").click();
@@ -491,7 +552,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
         
         processMobQuest: function() {
-            this.setStatusMessage("Hunting mobs");
+            setStatusMessage("Hunting mobs");
             this.startProgressChecking();
             const currentGoal = this.runtime.questGoals[this.runtime.currentGoalIndex];
             this.configureMobSpawner(currentGoal.mobType);
@@ -525,7 +586,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
         
         processPlayerQuest: function() {
-            this.setStatusMessage("Starting PVP");
+            setStatusMessage("Starting PVP");
             this.startProgressChecking();
             if ($("#pvp_Panel .pvp_status").hasClass("red")) {
                 $("#pvp_Panel .pvp_button.pvp_pvp").click();
@@ -533,7 +594,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
         
         processLPVMQuest: function() {
-            this.setStatusMessage("Starting LPVM");
+            setStatusMessage("Starting LPVM");
             this.startProgressChecking();
             if ($("#lpvm_Panel .lpvm_status").hasClass("red")) {
                 $("#lpvm_Panel .lpvm_button.lpvm_lpvm").click();
@@ -541,22 +602,22 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
         
         processExpeditionQuest: function() {
-            this.setStatusMessage("Processing expedition quest");
+            setStatusMessage("Processing expedition quest");
             this.useQuestProceed(); // Use default action
         },
         
         processInstanceQuest: function() {
-            this.setStatusMessage("Processing instance quest");
+            setStatusMessage("Processing instance quest");
              this.useQuestProceed(); // Use default action
         },
         
         processDonationQuest: function() {
-            this.setStatusMessage("Processing donation quest");
+            setStatusMessage("Processing donation quest");
             this.useQuestProceed(); // Use default action
         },
         
         useQuestProceed: function() {
-            this.setStatusMessage("Using default quest action");
+            setStatusMessage("Using default quest action");
             // Use the existing questProceed method if available in the scope
             // Assuming questProceed is globally available or part of another object like `kwsv3`
             if (typeof questProceed === 'function') {
@@ -569,7 +630,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
                  if ($questOption.length > 0) {
                      $questOption.click();
                  } else {
-                     this.setStatusMessage("No default action found!");
+                     setStatusMessage("No default action found!");
                      this.skipCurrentQuest(); // Skip if no action possible
                      return;
                  }
@@ -613,7 +674,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
                 // Goals haven't changed, maybe stuck? Let's try the action again for certain types.
                 const currentGoal = this.runtime.questGoals[this.runtime.currentGoalIndex];
                 if (currentGoal && (currentGoal.type === 'mob' || currentGoal.type === 'pvp' || currentGoal.type === 'lpvm')) {
-                    this.setStatusMessage(`Re-triggering action for ${currentGoal.type}`);
+                    setStatusMessage(`Re-triggering action for ${currentGoal.type}`);
                     if (currentGoal.type === 'mob') GAME.socket.emit('ga', { a: 15, type: 13 });
                     // PVP/LPVM should be running via their own loops, no need to re-trigger start
                 }
@@ -629,7 +690,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
             const currentGoal = this.runtime.questGoals[this.runtime.currentGoalIndex];
             
             if (currentGoal.current >= currentGoal.required) {
-                this.setStatusMessage(`Goal ${this.runtime.currentGoalIndex + 1} complete.`);
+                setStatusMessage(`Goal ${this.runtime.currentGoalIndex + 1} complete.`);
                 this.runtime.currentGoalIndex++;
                 
                 if (this.runtime.currentGoalIndex >= this.runtime.questGoals.length) {
@@ -639,19 +700,19 @@ if (typeof DAILY_QUESTS === 'undefined') {
                 }
             } else {
                  // Goal not yet complete, continue current action (implicitly handled by external loops like RESP/PVP/LPVM or re-triggers)
-                 this.setStatusMessage(`Progress: ${currentGoal.current}/${currentGoal.required} for goal ${this.runtime.currentGoalIndex + 1}`);
+                 setStatusMessage(`Progress: ${currentGoal.current}/${currentGoal.required} for goal ${this.runtime.currentGoalIndex + 1}`);
             }
         },
         
         checkQuestCompletion: function() {
             if (!this.settings.active) return;
             if ($("#quest_con").length === 0) {
-                this.setStatusMessage("Quest window closed, assuming complete.");
+                setStatusMessage("Quest window closed, assuming complete.");
                 this.markCurrentLocationComplete();
                 this.moveToNextLocation();
             } else {
                 // Quest window still open, maybe needs another interaction
-                this.setStatusMessage("Quest window still open, checking content...");
+                setStatusMessage("Quest window still open, checking content...");
                 this.analyzeQuestContent(); // Re-analyze
                 if (this.runtime.questGoals.length === 0) { // If analysis shows no goals, assume it's a simple dialog
                      this.useQuestProceed(); // Try proceeding again
@@ -664,7 +725,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
         
         finishQuest: function() {
             if (!this.settings.active) return;
-            this.setStatusMessage("Finishing quest");
+            setStatusMessage("Finishing quest");
             this.stopActivities();
             
             // Try to click the finish/continue button
@@ -691,7 +752,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
         
         skipCurrentQuest: function() {
-            this.setStatusMessage("Skipping quest");
+            setStatusMessage("Skipping quest");
             this.stopActivities();
             if ($("#quest_con").length > 0) {
                 $("[data-option='close_quest']").click();
@@ -702,7 +763,7 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
         
         skipCurrentLocation: function() {
-            this.setStatusMessage("Skipping location: " + this.locations[this.runtime.currentLocationIndex].name);
+            setStatusMessage("Skipping location: " + this.locations[this.runtime.currentLocationIndex].name);
             this.stopActivities();
              // Mark as completed for this run to avoid retrying
             this.markCurrentLocationComplete();
@@ -712,14 +773,14 @@ if (typeof DAILY_QUESTS === 'undefined') {
         markCurrentLocationComplete: function() {
             if (this.runtime.currentLocationIndex < this.locations.length) {
                 this.locations[this.runtime.currentLocationIndex].completed = true;
-                this.updateQuestsList();
-                this.updateProgressCounter();
+                updateQuestsList();
+                updateProgressCounter();
             }
         },
         
         moveToNextLocation: function() {
             if (!this.settings.active) return;
-            this.setStatusMessage("Moving to next location...");
+            setStatusMessage("Moving to next location...");
             this.runtime.isProcessingQuest = false;
             this.runtime.isMoving = false;
             this.runtime.path = [];
@@ -733,8 +794,8 @@ if (typeof DAILY_QUESTS === 'undefined') {
             this.findNextLocation();
             
             if (this.runtime.currentLocationIndex < this.locations.length) {
-                this.setStatusMessage("Next location: " + this.locations[this.runtime.currentLocationIndex].name);
-                this.updateQuestsList();
+                setStatusMessage("Next location: " + this.locations[this.runtime.currentLocationIndex].name);
+                updateQuestsList();
                 setTimeout(() => {
                     if (!this.settings.active) return;
                     this.teleportToCurrentLocation();
@@ -745,68 +806,12 @@ if (typeof DAILY_QUESTS === 'undefined') {
         },
         
         completeAllQuests: function() {
-            this.setStatusMessage("All quests completed!");
+            setStatusMessage("All quests completed!");
             this.settings.active = false;
             // Update button state
             $(".dq_button.dq_start_stop b").removeClass("green").addClass("red").html("Off");
-            this.updateQuestsList();
-            this.updateProgressCounter();
-        },
-        
-        // UI Helper Methods
-        updateQuestsList: function() {
-            const $list = $('#dq_locations_list');
-            $list.empty();
-            
-            if (!this.locations || this.locations.length === 0) return;
-            
-            this.locations.forEach((location, index) => {
-                const $location = $('<div class="dq_location"></div>');
-                $location.data('index', index);
-                
-                // Add toggle checkbox
-                const $toggle = $('<input type="checkbox" class="dq_location_toggle">');
-                $toggle.prop('checked', !location.disabled);
-                $location.append($toggle);
-                
-                // Add location name
-                const $name = $('<div class="dq_location_name"></div>').text(location.name);
-                if (location.completed) {
-                    $name.addClass('completed');
-                }
-                if (this.runtime.currentLocationIndex === index && this.settings.active) {
-                    $location.addClass('active');
-                }
-                $location.append($name);
-                
-                // Add status indicator
-                const $status = $('<div class="dq_location_status"></div>');
-                if (location.completed) {
-                    $status.text('✓');
-                    $status.css('color', 'green');
-                } else if (location.disabled) {
-                    $status.text('✗');
-                    $status.css('color', 'red');
-                } else {
-                    $status.text('○');
-                    $status.css('color', 'white');
-                }
-                $location.append($status);
-                
-                $list.append($location);
-            });
-        },
-        
-        updateProgressCounter: function() {
-            if (!this.locations || this.locations.length === 0) return;
-            
-            const total = this.locations.length;
-            const completed = this.locations.filter(loc => loc.completed).length;
-            $('#dq_progress_count').text(completed + '/' + total);
-        },
-        
-        setStatusMessage: function(message) {
-            $('#dq_status_message').text(message);
+            updateQuestsList();
+            updateProgressCounter();
         },
         
         // Settings management
